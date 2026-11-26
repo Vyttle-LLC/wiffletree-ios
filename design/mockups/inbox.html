@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5 · Inbox · Wiffletree iPhone mockups</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="page-header">
+  <h1>5 · Inbox</h1>
+  <nav class="crumbs"><a href="project.html">← Project</a><a href="index.html">All screens</a><a href="ticket.html">Next: Ticket detail →</a></nav>
+  <span class="spacer"></span>
+  <div class="appearance"></div>
+</header>
+<div class="intro">
+  <p>Everything a coordinator escalated to you, across the host's projects: questions with their choices, and approvals to publish or merge a pull request. Answering here is the same as answering on the Mac.</p>
+</div>
+<main class="gallery">
+
+  <figure class="shot">
+    <div class="phones">
+      <div class="phone">
+        <div class="nav"><div class="lead"></div><div></div><div class="trail"></div></div>
+        <div class="large-title">Inbox</div>
+        <div class="seg"><span class="on">Needs you · 3</span><span>Answered</span></div>
+        <div class="content" style="padding-top:12px">
+          <div class="ask">
+            <div class="from"><svg class="i"><use href="#i-question"/></svg>Station map · Coordinator<span class="meta">12 min</span></div>
+            <div class="q">Which map tiles should the station page use?</div>
+            <div class="detail">Both are free for this volume. Apple Maps needs no key on iOS; the web page would need a token.</div>
+            <div class="options">
+              <div class="opt">OpenStreetMap<small>Same tiles on web and app</small></div>
+              <div class="opt">Apple Maps<small>Native look, token for the web</small></div>
+            </div>
+            <div class="answer-own">Answer in your own words…</div>
+          </div>
+
+          <div class="ask">
+            <div class="from"><svg class="i"><use href="#i-pr"/></svg>Tide alerts · Publish<span class="meta">25 min</span></div>
+            <div class="q">Publish “Store alert thresholds per station”?</div>
+            <div class="detail">Review passed. Wiffletree pushes <span class="mono">wiffletree/store-alert-thresholds</span> and opens a pull request on Vyttle-LLC/tidepool.</div>
+            <div class="btn-row"><button class="btn gray small" style="flex:1">Deny</button><button class="btn filled small" style="flex:1">Approve</button></div>
+          </div>
+
+          <div class="ask">
+            <div class="from"><svg class="i"><use href="#i-merge"/></svg>Flaky sync test · Merge<span class="meta">1 h</span></div>
+            <div class="q">Merge #212 into main?</div>
+            <div class="detail">Checks passed · 1 approval · squash merge.</div>
+            <div class="btn-row"><button class="btn gray small" style="flex:1">Deny</button><button class="btn filled small" style="flex:1">Merge</button></div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><svg class="i"><use href="#i-grid"/></svg>Projects</div>
+          <div class="tab on"><svg class="i"><use href="#i-tray"/></svg><span class="badge">3</span>Inbox</div>
+          <div class="tab"><svg class="i"><use href="#i-gauge"/></svg>Usage</div>
+          <div class="tab"><svg class="i"><use href="#i-gear"/></svg>Settings</div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Needs you</b>A card per item, newest first. Questions show the coordinator's choices as buttons plus “own words”; approvals have Deny and Approve (or Merge). The glyph and label say the kind, so accent is only on the action.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <div class="phones">
+      <div class="phone">
+        <div class="nav"><div class="lead"></div><div></div><div class="trail"></div></div>
+        <div class="large-title">Inbox</div>
+        <div class="seg"><span class="on">Needs you · 2</span><span>Answered</span></div>
+        <div class="content" style="padding-top:12px">
+          <div class="ask" style="background:var(--tint-green)">
+            <div class="from" style="color:var(--green)"><svg class="i"><use href="#i-check"/></svg>Answered · OpenStreetMap</div>
+            <div class="q">Which map tiles should the station page use?</div>
+            <div class="detail" style="margin:0">Sent to Station map's coordinator. <span style="color:var(--accent);font-weight:600">Undo</span></div>
+          </div>
+          <div class="swipe" style="margin:0 16px 12px;border-radius:14px">
+            <div class="actions"><span class="act-gray" style="width:100px"><svg class="i"><use href="#i-x"/></svg>Dismiss</span></div>
+            <div class="ask" style="margin:0">
+              <div class="from"><svg class="i"><use href="#i-pr"/></svg>Tide alerts · Publish<span class="meta">25 min</span></div>
+              <div class="q">Publish “Store alert thresholds per station”?</div>
+              <div class="detail">Review passed. Wiffletree pushes <span class="mono">wiffletree/store-alert-thresholds</span> and opens a pull request.</div>
+              <div class="btn-row"><button class="btn gray small" style="flex:1">Deny</button><button class="btn filled small" style="flex:1">Approve</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><svg class="i"><use href="#i-grid"/></svg>Projects</div>
+          <div class="tab on"><svg class="i"><use href="#i-tray"/></svg><span class="badge">2</span>Inbox</div>
+          <div class="tab"><svg class="i"><use href="#i-gauge"/></svg>Usage</div>
+          <div class="tab"><svg class="i"><use href="#i-gear"/></svg>Settings</div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Answering and dismissing</b>An answered card turns green with the answer and a short Undo, then moves to Answered. Swiping a card dismisses it without answering, as Dismiss does on the Mac (it does not wake the asker).</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <div class="phones">
+      <div class="phone">
+        <div class="nav"><div class="lead"></div><div></div><div class="trail"></div></div>
+        <div class="large-title">Inbox</div>
+        <div class="seg"><span>Needs you · 2</span><span class="on">Answered</span></div>
+        <div class="content">
+          <div class="section-head">Today</div>
+          <div class="list">
+            <div class="row has-icon"><span class="icon-tile"><svg class="i"><use href="#i-question"/></svg></span><div class="main">Which map tiles should the station page use?<span class="sub">Station map · you chose OpenStreetMap · 9:44</span></div></div>
+            <div class="row has-icon"><span class="icon-tile"><svg class="i"><use href="#i-pr"/></svg></span><div class="main">Publish “Retry the sync on a lost lock”<span class="sub">Flaky sync test · approved · 8:10</span></div></div>
+          </div>
+          <div class="section-head">Yesterday</div>
+          <div class="list">
+            <div class="row has-icon"><span class="icon-tile"><svg class="i"><use href="#i-merge"/></svg></span><div class="main">Merge #207 into main<span class="sub">Tide alerts · denied: “wait for the release” · 18:02</span></div></div>
+            <div class="row has-icon"><span class="icon-tile"><svg class="i"><use href="#i-question"/></svg></span><div class="main">Keep the old alert format for a release?<span class="sub">Tide alerts · answered on the Mac · 16:30</span></div></div>
+            <div class="row has-icon"><span class="icon-tile"><svg class="i"><use href="#i-x"/></svg></span><div class="main">Allow UI evaluators in this project?<span class="sub">Station map · dismissed · 11:05</span></div></div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><svg class="i"><use href="#i-grid"/></svg>Projects</div>
+          <div class="tab on"><svg class="i"><use href="#i-tray"/></svg><span class="badge">2</span>Inbox</div>
+          <div class="tab"><svg class="i"><use href="#i-gauge"/></svg>Usage</div>
+          <div class="tab"><svg class="i"><use href="#i-gear"/></svg>Settings</div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Answered</b>History by day: what was asked, what you decided and where (here or on the Mac). Tapping a row opens the project's conversation at that question.</figcaption>
+  </figure>
+
+</main>
+<script src="mockup.js"></script>
+</body>
+</html>

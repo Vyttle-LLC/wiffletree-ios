@@ -258,7 +258,7 @@ struct DemoHostConnectionTests {
         var states: [ConnectionState] = []
         demo.close()
         for await state in demo.states { states.append(state) }
-        #expect(states == [.connecting, .connected(address: DemoHostConnection.address, level: .control), .closed])
+        #expect(states == [.connecting, .connected(address: DemoHostConnection.address, level: .control, capabilities: DemoHostConnection.capabilities), .closed])
         #expect(await next(1, of: demo.events).isEmpty)
         await #expect(throws: ConnectionError.closed) { try await demo.request(SnapshotCommand()) }
     }

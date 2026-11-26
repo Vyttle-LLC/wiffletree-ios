@@ -110,7 +110,7 @@ extension Snapshot {
             parts.append("\(questions.count) questions wait for your answer")
         }
         if !approvals.isEmpty {
-            let kinds = approvals.map(\.approvalKind).formatted(.list(type: .and))
+            let kinds = approvals.compactMap(\.approval?.phrase).formatted(.list(type: .and))
             parts.append("\(kinds) \(approvals.count == 1 ? "waits" : "wait") for your approval")
         }
         guard let first = parts.first else { return "" }
@@ -119,11 +119,16 @@ extension Snapshot {
     }
 }
 
-extension Attention {
-    /// What an approval asks to do, such as "a publish".
-    fileprivate var approvalKind: String {
-        let kinds = ["publish:": "a publish", "merge:": "a merge", "permission:": "a permission", "retarget:": "a retarget"]
-        return kinds.first { operationID.hasPrefix($0.key) }?.value ?? "a request"
+extension Attention.Approval {
+    /// What the approval asks for, mid-sentence, such as "a publish".
+    fileprivate var phrase: String {
+        switch self {
+        case .publish: "a publish"
+        case .merge: "a merge"
+        case .permission: "a permission"
+        case .retarget: "a retarget"
+        case .repository: "a repository request"
+        }
     }
 }
 

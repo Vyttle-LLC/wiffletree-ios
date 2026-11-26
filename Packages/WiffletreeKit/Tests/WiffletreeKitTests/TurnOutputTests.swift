@@ -90,6 +90,20 @@ struct TurnOutputTests {
         #expect(try message("m-7", sender: "implementer").runID == nil)
     }
 
+    @Test func anApprovalIsToldByItsOperationIDsPrefix() {
+        func item(_ operationID: String) -> Attention {
+            Attention(id: "a", projectID: "p", sessionID: "c", operationID: operationID, prompt: "?")
+        }
+        #expect(item("repository:req-1").approval == .repository)
+        #expect(item("repository:req-1").isApproval)
+        #expect(item("publish:t1:pull_request").approval == .publish)
+        #expect(item("merge:m1").approval == .merge)
+        #expect(item("permission:p1").approval == .permission)
+        #expect(item("retarget:r1").approval == .retarget)
+        #expect(item("map-tiles").approval == nil)
+        #expect(item("repositories-to-add").approval == nil)
+    }
+
     @Test func aSnapshotCarriesSpacesRuntimesAndArchivedAgents() throws {
         let snapshot = try decode(Snapshot.self, #"""
         {"projects":[{"id":"p1","name":"Tide alerts","space":"s1","added_repositories":[]}],

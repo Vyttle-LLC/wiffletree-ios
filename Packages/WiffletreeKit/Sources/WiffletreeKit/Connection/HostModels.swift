@@ -215,10 +215,19 @@ public struct Attention: Decodable, Identifiable, Sendable {
         self.answer = answer
     }
 
-    /// An approval, such as publishing or merging, which is approved or denied, never dismissed.
-    public var isApproval: Bool {
-        ["permission:", "publish:", "merge:", "retarget:", "repository:"].contains { operationID.hasPrefix($0) }
+    /// What an approval asks for, named by its operation id's prefix as the host writes it, such
+    /// as `publish:`.
+    public enum Approval: String, CaseIterable, Sendable {
+        case permission, publish, merge, retarget, repository
     }
+
+    /// The approval this item is, or nil for a question.
+    public var approval: Approval? {
+        Approval.allCases.first { operationID.hasPrefix("\($0.rawValue):") }
+    }
+
+    /// An approval is approved or denied, never dismissed.
+    public var isApproval: Bool { approval != nil }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)

@@ -315,7 +315,7 @@ private struct Composer: View {
             .disabled(isViewOnly)
 
             RoundButton(systemImage: "arrow.up", filled: chat.canSend, label: "Send") {
-                dictation.stop()
+                dictation.cancel()
                 Task { await chat.send() }
             }
             .disabled(!chat.canSend || isViewOnly)
@@ -328,7 +328,7 @@ private struct Composer: View {
         } message: {
             Text(dictation.problem ?? "")
         }
-        .onDisappear { dictation.stop() }
+        .onDisappear { dictation.cancel() }
     }
 
     private var placeholder: String {

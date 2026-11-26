@@ -16,7 +16,8 @@ final class Dictation {
     @ObservationIgnored private var engine: AVAudioEngine?
     @ObservationIgnored private var request: SFSpeechAudioBufferRecognitionRequest?
     @ObservationIgnored private var task: SFSpeechRecognitionTask?
-    /// Counts the times dictation started, so a result is used only by the session that heard it.
+    /// Changes when dictation is cancelled or starts again, so a result is used only by the session
+    /// that heard it.
     @ObservationIgnored private var session = 0
 
     /// Starts listening. `onText` gets the whole transcript so far each time it grows.
@@ -48,34 +49,48 @@ final class Dictation {
             problem = "Dictation couldn't start: \(error.localizedDescription)"
             return
         }
+        cancel()
         self.engine = engine
         self.request = request
         isListening = true
-        session += 1
         let session = session
         task = recognizer.recognitionTask(with: request, resultHandler: Self.results { [weak self] text, ended in
             Task { @MainActor in
-                // A result that arrives after this session stopped, such as the final one after
-                // Send, must not put the sent text back in the field.
-                guard let self, self.isListening, self.session == session else { return }
+                // A result of a cancelled session, such as the final one after Send, must not put
+                // the sent text back in the field.
+                guard let self, self.session == session else { return }
                 if let text { onText(text) }
-                if ended { self.stop() }
+                if ended {
+                    self.stop()
+                    self.task = nil
+                }
             }
         })
     }
 
-    /// Stops listening; what was heard so far stays in the field to edit, and nothing heard later
-    /// is added.
+    /// Stops listening and lets recognition finish: its final words still reach the field, where
+    /// they can be edited before sending.
     func stop() {
         guard isListening else { return }
+        endAudio()
+        task?.finish()
+    }
+
+    /// Stops listening and drops anything still being recognised, as Send and leaving the screen do.
+    func cancel() {
+        session += 1
+        if isListening { endAudio() }
+        task?.cancel()
+        task = nil
+    }
+
+    private func endAudio() {
         isListening = false
         engine?.stop()
         engine?.inputNode.removeTap(onBus: 0)
         request?.endAudio()
-        task?.cancel()
         engine = nil
         request = nil
-        task = nil
         levels = levels.map { _ in 0 }
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }

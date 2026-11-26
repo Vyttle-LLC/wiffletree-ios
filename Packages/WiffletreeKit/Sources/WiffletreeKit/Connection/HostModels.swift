@@ -17,17 +17,25 @@ extension OpenValue {
 /// What `snapshot` answers: the live workspace.
 public struct Snapshot: Decodable, Sendable {
     public let projects: [Project]
+    public let spaces: [Space]
     public let sessions: [Session]
+    /// What each session is assigned to and runs on.
+    public let runtimes: [SessionRuntime]
     /// The Inbox: questions and approvals waiting for the human.
     public let attention: [Attention]
     public let tickets: [Ticket]
     public let repositories: [Repository]
 
-    private enum CodingKeys: String, CodingKey { case projects, sessions, attention, tickets, repositories }
+    private enum CodingKeys: String, CodingKey { case projects, spaces, sessions, runtimes, attention, tickets, repositories }
 
-    public init(projects: [Project], sessions: [Session], attention: [Attention], tickets: [Ticket], repositories: [Repository] = []) {
+    public init(
+        projects: [Project], spaces: [Space] = [], sessions: [Session], runtimes: [SessionRuntime] = [],
+        attention: [Attention], tickets: [Ticket], repositories: [Repository] = []
+    ) {
         self.projects = projects
+        self.spaces = spaces
         self.sessions = sessions
+        self.runtimes = runtimes
         self.attention = attention
         self.tickets = tickets
         self.repositories = repositories
@@ -36,7 +44,9 @@ public struct Snapshot: Decodable, Sendable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         projects = try container.decode([Project].self, forKey: .projects)
+        spaces = try container.decodeIfPresent([Space].self, forKey: .spaces) ?? []
         sessions = try container.decode([Session].self, forKey: .sessions)
+        runtimes = try container.decodeIfPresent([SessionRuntime].self, forKey: .runtimes) ?? []
         attention = try container.decode([Attention].self, forKey: .attention)
         tickets = try container.decodeIfPresent([Ticket].self, forKey: .tickets) ?? []
         repositories = try container.decodeIfPresent([Repository].self, forKey: .repositories) ?? []
@@ -51,13 +61,52 @@ public struct Snapshot: Decodable, Sendable {
     }
 }
 
+/// A Space: a group of projects that share a brain, as the desktop sidebar groups them.
+public struct Space: Decodable, Identifiable, Sendable {
+    public let id: String
+    public let name: String
+}
+
+/// What a session is assigned to and runs on.
+public struct SessionRuntime: Decodable, Sendable {
+    public struct Profile: Decodable, Sendable {
+        public let provider: String
+        /// Such as `opus`.
+        public let model: String
+    }
+
+    public let sessionID: String
+    /// The ticket a ticket agent works on.
+    public let ticketID: String?
+    public let profile: Profile?
+
+    private enum CodingKeys: String, CodingKey { case sessionID = "sessionId", ticketID = "ticketId", profile }
+}
+
 public struct Project: Decodable, Identifiable, Sendable {
     public let id: String
     public let name: String
+    /// The Space it belongs to; empty from an older host.
+    public let space: String
     /// The project this one is filed under.
     public let parentID: String?
 
-    private enum CodingKeys: String, CodingKey { case id, name, parentID = "parentId" }
+    private enum CodingKeys: String, CodingKey { case id, name, space, parentID = "parentId" }
+
+    init(id: String, name: String, space: String = "", parentID: String? = nil) {
+        self.id = id
+        self.name = name
+        self.space = space
+        self.parentID = parentID
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        space = try container.decodeIfPresent(String.self, forKey: .space) ?? ""
+        parentID = try container.decodeIfPresent(String.self, forKey: .parentID)
+    }
 }
 
 /// An agent: a coordinator, an implementer, a verifier.
@@ -89,9 +138,34 @@ public struct Session: Decodable, Identifiable, Sendable {
     public let role: Role
     public let provider: String
     public internal(set) var status: Status
+    /// An archived session appears only while its open ticket does.
+    public let archived: Bool
 
     private enum CodingKeys: String, CodingKey {
-        case id, projectID = "projectId", parentID = "parentId", name, role, provider, status
+        case id, projectID = "projectId", parentID = "parentId", name, role, provider, status, archived
+    }
+
+    init(id: String, projectID: String, parentID: String?, name: String, role: Role, provider: String, status: Status, archived: Bool = false) {
+        self.id = id
+        self.projectID = projectID
+        self.parentID = parentID
+        self.name = name
+        self.role = role
+        self.provider = provider
+        self.status = status
+        self.archived = archived
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        projectID = try container.decode(String.self, forKey: .projectID)
+        parentID = try container.decodeIfPresent(String.self, forKey: .parentID)
+        name = try container.decode(String.self, forKey: .name)
+        role = try container.decode(Role.self, forKey: .role)
+        provider = try container.decode(String.self, forKey: .provider)
+        status = try container.decode(Status.self, forKey: .status)
+        archived = try container.decodeIfPresent(Bool.self, forKey: .archived) ?? false
     }
 }
 
@@ -140,6 +214,20 @@ public struct Attention: Decodable, Identifiable, Sendable {
         self.options = options
         self.answer = answer
     }
+
+    /// What an approval asks for, named by its operation id's prefix as the host writes it, such
+    /// as `publish:`.
+    public enum Approval: String, CaseIterable, Sendable {
+        case permission, publish, merge, retarget, repository
+    }
+
+    /// The approval this item is, or nil for a question.
+    public var approval: Approval? {
+        Approval.allCases.first { operationID.hasPrefix("\($0.rawValue):") }
+    }
+
+    /// An approval is approved or denied, never dismissed.
+    public var isApproval: Bool { approval != nil }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)

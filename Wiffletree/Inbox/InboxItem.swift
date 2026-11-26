@@ -73,19 +73,20 @@ struct InboxItem: Identifiable {
     }
 
     private static func kind(of attention: Attention, in snapshot: Snapshot) -> Kind {
-        let operation = attention.operationID
-        if operation.hasPrefix("publish:") { return .publish }
-        if operation.hasPrefix("merge:") {
+        switch attention.approval {
+        case .publish:
+            return .publish
+        case .merge:
             // The host asks only about unprotected bases; the ticket says whether that still holds.
             let ticket = snapshot.tickets.first { $0.merging?.stage.item == attention.id }
             return .merge(
                 isProtected: ticket.map(snapshot.mergesIntoProtectedBranch) ?? false,
                 pullRequestURL: ticket?.pullRequest.flatMap { URL(string: $0.url) }
             )
+        case .permission: return .approval("Permission")
+        case .retarget: return .approval("Retarget")
+        case .repository: return .approval("Repository")
+        case nil: return .question
         }
-        if operation.hasPrefix("permission:") { return .approval("Permission") }
-        if operation.hasPrefix("retarget:") { return .approval("Retarget") }
-        if operation.hasPrefix("repository:") { return .approval("Repository") }
-        return .question
     }
 }

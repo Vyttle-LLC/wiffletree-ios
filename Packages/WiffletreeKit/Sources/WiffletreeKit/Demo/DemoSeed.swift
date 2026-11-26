@@ -3,7 +3,9 @@ import Foundation
 /// Everything the demo host holds, and changes as the human uses it.
 struct DemoWorkspace: Sendable {
     var projects: [Project]
+    var spaces: [Space]
     var sessions: [Session]
+    var runtimes: [SessionRuntime]
     /// Oldest first, answered ones included, as the host keeps them.
     var attention: [Attention]
     var tickets: [Ticket]
@@ -35,9 +37,14 @@ enum DemoID {
     static let mergeApproval = "demo-attention-merge-212"
 
     static let thresholdsTicket = "demo-ticket-thresholds"
+    static let alertCommandTicket = "demo-ticket-alert-command"
+    static let stationPageTicket = "demo-ticket-station-page"
+    static let drawStationsTicket = "demo-ticket-draw-stations"
     static let syncRetryTicket = "demo-ticket-sync-retry"
+    static let lockLogTicket = "demo-ticket-lock-log"
 
     static let tidepool = "demo-repository-tidepool"
+    static let space = "demo-space"
 }
 
 /// The demo's starting workspace: the story the approved mockups in `design/mockups/` tell,
@@ -47,7 +54,9 @@ enum DemoSeed {
         let clock = SeedClock(now: now)
         return DemoWorkspace(
             projects: projects,
+            spaces: [Space(id: DemoID.space, name: "Sample Space")],
             sessions: sessions,
+            runtimes: runtimes,
             attention: attention,
             tickets: tickets,
             repositories: repositories,
@@ -63,9 +72,9 @@ enum DemoSeed {
     ]
 
     private static let projects = [
-        Project(id: DemoID.tideAlerts, name: "Tide alerts", parentID: nil),
-        Project(id: DemoID.stationMap, name: "Station map", parentID: nil),
-        Project(id: DemoID.flakySyncTest, name: "Flaky sync test", parentID: nil),
+        Project(id: DemoID.tideAlerts, name: "Tide alerts", space: DemoID.space),
+        Project(id: DemoID.stationMap, name: "Station map", space: DemoID.space),
+        Project(id: DemoID.flakySyncTest, name: "Flaky sync test", space: DemoID.space),
     ]
 
     /// Four agents working: Tide alerts' reviewer and station-page implementer, Station map's
@@ -79,7 +88,28 @@ enum DemoSeed {
         Session(id: "demo-station-implementer", projectID: DemoID.stationMap, parentID: DemoID.stationCoordinator, name: "Implementer", role: .implementer, provider: "claude", status: .working),
         Session(id: DemoID.flakyCoordinator, projectID: DemoID.flakySyncTest, parentID: nil, name: "Flaky sync test", role: .projectOrchestrator, provider: "claude", status: .ready),
         Session(id: "demo-flaky-tester", projectID: DemoID.flakySyncTest, parentID: DemoID.flakyCoordinator, name: "Tester", role: .tester, provider: "codex", status: .working),
+        Session(id: "demo-sync-retry-implementer", projectID: DemoID.flakySyncTest, parentID: DemoID.flakyCoordinator, name: "Implementer", role: .implementer, provider: "claude", status: .done, archived: true),
+        Session(id: "demo-sync-retry-tester", projectID: DemoID.flakySyncTest, parentID: DemoID.flakyCoordinator, name: "Tester", role: .tester, provider: "codex", status: .done, archived: true),
     ]
+
+    /// Which ticket each ticket agent works on, and its model.
+    private static let runtimes: [SessionRuntime] = {
+        let opus = SessionRuntime.Profile(provider: "claude", model: "opus")
+        let sonnet = SessionRuntime.Profile(provider: "claude", model: "sonnet")
+        let codex = SessionRuntime.Profile(provider: "codex", model: "gpt-5-codex")
+        return [
+            SessionRuntime(sessionID: DemoID.tideCoordinator, ticketID: nil, profile: opus),
+            SessionRuntime(sessionID: "demo-tide-alert-implementer", ticketID: DemoID.alertCommandTicket, profile: opus),
+            SessionRuntime(sessionID: "demo-tide-alert-reviewer", ticketID: DemoID.alertCommandTicket, profile: codex),
+            SessionRuntime(sessionID: "demo-tide-station-page-implementer", ticketID: DemoID.stationPageTicket, profile: opus),
+            SessionRuntime(sessionID: DemoID.stationCoordinator, ticketID: nil, profile: opus),
+            SessionRuntime(sessionID: "demo-station-implementer", ticketID: DemoID.drawStationsTicket, profile: sonnet),
+            SessionRuntime(sessionID: DemoID.flakyCoordinator, ticketID: nil, profile: opus),
+            SessionRuntime(sessionID: "demo-flaky-tester", ticketID: DemoID.lockLogTicket, profile: codex),
+            SessionRuntime(sessionID: "demo-sync-retry-implementer", ticketID: DemoID.syncRetryTicket, profile: opus),
+            SessionRuntime(sessionID: "demo-sync-retry-tester", ticketID: DemoID.syncRetryTicket, profile: codex),
+        ]
+    }()
 
     /// Three items need the human, one per project; the answered ones are the Inbox's history.
     private static let attention = [
@@ -127,7 +157,7 @@ enum DemoSeed {
             ])
         ),
         Ticket(
-            id: "demo-ticket-alert-command", coordinatorID: DemoID.tideCoordinator, repositoryID: DemoID.tidepool,
+            id: DemoID.alertCommandTicket, coordinatorID: DemoID.tideCoordinator, repositoryID: DemoID.tidepool,
             title: "Add the tidepool alert command",
             brief: "`tidepool alert` checks each station against its threshold and sends one alert per crossing.",
             branch: "wiffletree/add-tidepool-alert", state: .verifying,
@@ -146,13 +176,13 @@ enum DemoSeed {
             ]
         ),
         Ticket(
-            id: "demo-ticket-station-page", coordinatorID: DemoID.tideCoordinator, repositoryID: DemoID.tidepool,
+            id: DemoID.stationPageTicket, coordinatorID: DemoID.tideCoordinator, repositoryID: DemoID.tidepool,
             title: "Show thresholds on the station page",
             brief: "Show each station's threshold and its last alert on the station page, under the map.",
             branch: "wiffletree/show-thresholds-on-station-page", state: .assigned
         ),
         Ticket(
-            id: "demo-ticket-draw-stations", coordinatorID: DemoID.stationCoordinator, repositoryID: DemoID.tidepool,
+            id: DemoID.drawStationsTicket, coordinatorID: DemoID.stationCoordinator, repositoryID: DemoID.tidepool,
             title: "Draw stations on the map",
             brief: "Put a pin for every station on the station page's map.",
             branch: "wiffletree/draw-stations-on-the-map", state: .assigned
@@ -181,7 +211,7 @@ enum DemoSeed {
             )
         ),
         Ticket(
-            id: "demo-ticket-lock-log", coordinatorID: DemoID.flakyCoordinator, repositoryID: DemoID.tidepool,
+            id: DemoID.lockLogTicket, coordinatorID: DemoID.flakyCoordinator, repositoryID: DemoID.tidepool,
             title: "Log who holds the sync lock",
             brief: "Log the lock's holder and age when a sync waits on it, so the next flake is easy to read.",
             branch: "wiffletree/log-sync-lock-holder", state: .verifying,
@@ -210,32 +240,33 @@ enum DemoSeed {
         ])
     }
 
-    /// The coordinators' conversations. A coordinator's own words are kept as messages it sends
-    /// itself, since the client reads no turn output yet.
+    /// The coordinators' conversations, written as the host writes them: a coordinator's own
+    /// words are its turns' replies, messages it sends itself under `output:<run>`; Wiffletree's
+    /// notices have no sender and an id that names their kind.
     private static func messages(_ clock: SeedClock) -> [Message] {
-        let lines: [(minutesAgo: Int, sender: String?, recipient: String, body: String)] = [
-            (190, nil, DemoID.flakyCoordinator, "The sync test fails about one run in ten. Find out why."),
-            (178, DemoID.flakyCoordinator, DemoID.flakyCoordinator, """
+        let lines: [(minutesAgo: Int, from: SeedSender, recipient: String, body: String)] = [
+            (190, .human, DemoID.flakyCoordinator, "The sync test fails about one run in ten. Find out why."),
+            (178, .coordinator, DemoID.flakyCoordinator, """
                 It's a lost lock: when the lock times out mid-sync, a second sync starts and the test sees both. I've planned two tickets:
 
                 - **Retry the sync on a lost lock**
                 - **Log who holds the sync lock**, so the next flake is easy to read
                 """),
-            (80, DemoID.flakyCoordinator, DemoID.flakyCoordinator, """
+            (80, .coordinator, DemoID.flakyCoordinator, """
                 **Retry the sync on a lost lock** is accepted and published as #212 into `feature/sync-retry`; checks passed.
 
                 Merging it waits for you in the Inbox.
                 """),
-            (65, DemoID.tideCoordinator, DemoID.tideCoordinator, """
+            (65, .coordinator, DemoID.tideCoordinator, """
                 Welcome to the demo. I'm the coordinator for Tide alerts: I plan tickets, hand them to agents and ask you when a decision is yours.
 
                 Try it: answer a question in the **Inbox**, or reply here.
                 """),
-            (55, nil, DemoID.stationCoordinator, "Let's put the stations on a map on the station page."),
-            (50, DemoID.stationCoordinator, DemoID.stationCoordinator, """
+            (55, .human, DemoID.stationCoordinator, "Let's put the stations on a map on the station page."),
+            (50, .coordinator, DemoID.stationCoordinator, """
                 I've planned two tickets, **Draw stations on the map** and **Open a station's page from its pin**. The implementer has started on the first.
                 """),
-            (40, DemoID.tideCoordinator, DemoID.tideCoordinator, """
+            (40, .coordinator, DemoID.tideCoordinator, """
                 **Store alert thresholds per station** passed its Full review, and I've accepted it.
 
                 - **Change:** a thresholds table with `tidepool threshold set`, and a migration for existing stores.
@@ -243,22 +274,30 @@ enum DemoSeed {
 
                 Nothing has been pushed; publishing it waits for you in the Inbox.
                 """),
-            (32, "demo-tide-alert-implementer", DemoID.tideCoordinator, "Ready for testing: Add the tidepool alert command at 3f1c2e0, which fixes the double alert."),
-            (31, "demo-tide-alert-reviewer", DemoID.tideCoordinator, "Round 2 started: checking 3f1c2e0 for F1."),
-            (28, nil, DemoID.tideCoordinator, "Good. Can the alert also go to the station page?"),
-            (22, DemoID.tideCoordinator, DemoID.tideCoordinator, """
+            (33, .wiffletree("verification:"), DemoID.tideCoordinator, "Add the tidepool alert command: round 1 failed with 1 blocking finding."),
+            (32, .agent("demo-tide-alert-implementer"), DemoID.tideCoordinator, "Ready for testing: Add the tidepool alert command at 3f1c2e0, which fixes the double alert."),
+            (31, .agent("demo-tide-alert-reviewer"), DemoID.tideCoordinator, "Round 2 started: checking 3f1c2e0 for F1."),
+            (28, .human, DemoID.tideCoordinator, "Good. Can the alert also go to the station page?"),
+            (22, .coordinator, DemoID.tideCoordinator, """
                 Yes. I'll fold it into **Show thresholds on the station page** rather than open a new ticket, and tell its implementer now.
                 """),
-            (12, DemoID.stationCoordinator, DemoID.stationCoordinator, """
+            (12, .coordinator, DemoID.stationCoordinator, """
                 One decision before the map goes further: which map tiles? I've put the choice in your Inbox.
                 """),
         ]
         return lines.enumerated().map { index, line in
-            Message(
-                id: "demo-message-\(index + 1)",
-                sequence: Int64(index + 1),
+            let number = index + 1
+            let (id, sender): (String, String?) = switch line.from {
+            case .human: ("demo-message-\(number)", nil)
+            case .coordinator: (Message.replyPrefix + "demo-seed-run-\(number)", line.recipient)
+            case .agent(let id): ("demo-message-\(number)", id)
+            case .wiffletree(let prefix): ("\(prefix)demo-message-\(number)", nil)
+            }
+            return Message(
+                id: id,
+                sequence: Int64(number),
                 projectID: sessions.first { $0.id == line.recipient }!.projectID,
-                sender: line.sender,
+                sender: sender,
                 recipient: line.recipient,
                 body: line.body,
                 receipt: "completed",
@@ -317,6 +356,16 @@ enum DemoSeed {
             ], error: nil),
         ]
     }
+}
+
+/// Who wrote a line of the seed's conversations.
+private enum SeedSender {
+    case human
+    /// The conversation's own coordinator, at the end of a turn.
+    case coordinator
+    case agent(String)
+    /// A Wiffletree notice, with the id prefix that names its kind.
+    case wiffletree(String)
 }
 
 /// Times relative to when the demo starts.

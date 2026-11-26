@@ -27,6 +27,7 @@ enum DemoID {
     static let tideAlerts = "demo-tide-alerts"
     static let stationMap = "demo-station-map"
     static let flakySyncTest = "demo-flaky-sync-test"
+    static let legacyImporter = "demo-legacy-importer"
 
     static let tideCoordinator = "demo-tide-coordinator"
     static let stationCoordinator = "demo-station-coordinator"
@@ -75,6 +76,8 @@ enum DemoSeed {
         Project(id: DemoID.tideAlerts, name: "Tide alerts", space: DemoID.space),
         Project(id: DemoID.stationMap, name: "Station map", space: DemoID.space),
         Project(id: DemoID.flakySyncTest, name: "Flaky sync test", space: DemoID.space),
+        // Closed: the host's snapshot leaves its archived coordinator out, so it has no sessions.
+        Project(id: DemoID.legacyImporter, name: "Legacy importer", space: DemoID.space),
     ]
 
     /// Four agents working: Tide alerts' reviewer and station-page implementer, Station map's

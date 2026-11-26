@@ -52,6 +52,27 @@ public struct Snapshot: Decodable, Sendable {
         repositories = try container.decodeIfPresent([Repository].self, forKey: .repositories) ?? []
     }
 
+    /// The projects still open. Archiving a project's coordinator closes the project, and the
+    /// snapshot leaves an archived coordinator out, so a project is open while it has an
+    /// unarchived one, whoever its parent is: an Assistant's `start_work` project's coordinator
+    /// has the Assistant, which no snapshot lists, as its parent.
+    public var openProjects: [Project] {
+        let open = Set(sessions.filter { $0.role == .projectOrchestrator && !$0.archived }.map(\.projectID))
+        return projects.filter { open.contains($0.id) }
+    }
+
+    /// This snapshot without the closed projects, their sessions and their Inbox items. The host
+    /// still reports a closed project's open items and its open tickets' archived agents.
+    public func withoutClosedProjects() -> Snapshot {
+        let open = openProjects
+        let openIDs = Set(open.map(\.id))
+        return Snapshot(
+            projects: open, spaces: spaces,
+            sessions: sessions.filter { openIDs.contains($0.projectID) }, runtimes: runtimes,
+            attention: attention.filter { openIDs.contains($0.projectID) }, tickets: tickets, repositories: repositories
+        )
+    }
+
     /// Whether only the human may merge into the ticket's pull request's base, on GitHub. A ticket
     /// whose repository is not listed counts as protected, so the phone never offers its merge.
     public func mergesIntoProtectedBranch(_ ticket: Ticket) -> Bool {

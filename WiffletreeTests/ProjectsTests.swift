@@ -27,6 +27,7 @@ private func demoHost(sleep: @escaping @Sendable (Duration) async throws -> Void
 private enum Seed {
     static let tideAlerts = "demo-tide-alerts"
     static let stationMap = "demo-station-map"
+    static let legacyImporter = "demo-legacy-importer"
 }
 
 /// The demo host, recording the conversation reads sent to it.
@@ -87,6 +88,16 @@ struct HomeTests {
             "Implementing · coordinator asked a question",
             "Verifying · 1 of 2 tickets accepted",
         ])
+    }
+
+    @Test func aClosedProjectIsHiddenAndLeftOutOfTheCounts() async throws {
+        let host = try await demoHost()
+        let snapshot = try #require(host.snapshot)
+        #expect(snapshot.projects.map(\.name) == ["Tide alerts", "Station map", "Flaky sync test"])
+        #expect(snapshot.projectGroups.flatMap(\.projects).map(\.project.name) == ["Tide alerts", "Station map", "Flaky sync test"])
+        #expect(!snapshot.sessions.contains { $0.projectID == Seed.legacyImporter })
+        #expect(snapshot.workingAgents.count == 4)
+        #expect(host.openAttentionCount == 3)
     }
 
     @Test func theNeedYouCardNamesTheQuestionAndTheApprovals() async throws {

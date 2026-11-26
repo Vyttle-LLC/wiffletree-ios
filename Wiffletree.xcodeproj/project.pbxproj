@@ -1,0 +1,461 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0EE3782D68F4CC022A49FBAF /* WiffletreeKit in Frameworks */ = {isa = PBXBuildFile; productRef = B077928465509A90E540E904 /* WiffletreeKit */; };
+		57E758028A8CD3129AA68643 /* WiffletreeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 04F7EF1C1A56C5D53BD2EA47 /* WiffletreeKit */; };
+		A34207F3807DFBCF613CD6C5 /* WiffletreeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FEC773F74277BC493C98F1B /* WiffletreeApp.swift */; };
+		AE2216CC3B4B5E9C1F17D9C9 /* KeychainKeyStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD49BF6752A871CA67D1742B /* KeychainKeyStoreTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		9BFE9D3EBF5ABFBD102B4664 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4DD95EC33D6FA4B5B8DD9131 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3C7D7F7483F3F5AD67148F31;
+			remoteInfo = Wiffletree;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		42418774F60D581CEE638F7B /* Wiffletree.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Wiffletree.entitlements; sourceTree = "<group>"; };
+		4FEC773F74277BC493C98F1B /* WiffletreeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WiffletreeApp.swift; sourceTree = "<group>"; };
+		8ECDF811F59A9E1CD588C31B /* WiffletreeTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = WiffletreeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B0F936A50728D61AC902C918 /* WiffletreeKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = WiffletreeKit; path = Packages/WiffletreeKit; sourceTree = SOURCE_ROOT; };
+		B3AC9290B47DD6DAD16E4594 /* Wiffletree.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Wiffletree.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		DC64189FDEFBA7588EF7892D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		DD49BF6752A871CA67D1742B /* KeychainKeyStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainKeyStoreTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		06246EDE50EEEB21F995A8DA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0EE3782D68F4CC022A49FBAF /* WiffletreeKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D171449F225644ECFDEA32A2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				57E758028A8CD3129AA68643 /* WiffletreeKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		05539CD5FCC6A57F6FE87CE8 /* Wiffletree */ = {
+			isa = PBXGroup;
+			children = (
+				DC64189FDEFBA7588EF7892D /* Info.plist */,
+				42418774F60D581CEE638F7B /* Wiffletree.entitlements */,
+				4FEC773F74277BC493C98F1B /* WiffletreeApp.swift */,
+			);
+			path = Wiffletree;
+			sourceTree = "<group>";
+		};
+		5E409427D0B6D6A21B7D2F0A /* WiffletreeTests */ = {
+			isa = PBXGroup;
+			children = (
+				DD49BF6752A871CA67D1742B /* KeychainKeyStoreTests.swift */,
+			);
+			path = WiffletreeTests;
+			sourceTree = "<group>";
+		};
+		9177A89AECFC07C2B74C259F /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B3AC9290B47DD6DAD16E4594 /* Wiffletree.app */,
+				8ECDF811F59A9E1CD588C31B /* WiffletreeTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		960B163ABED81E2D1943A1E5 = {
+			isa = PBXGroup;
+			children = (
+				BB883C59646EA834AEB7E1AB /* Packages */,
+				05539CD5FCC6A57F6FE87CE8 /* Wiffletree */,
+				5E409427D0B6D6A21B7D2F0A /* WiffletreeTests */,
+				9177A89AECFC07C2B74C259F /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		BB883C59646EA834AEB7E1AB /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				B0F936A50728D61AC902C918 /* WiffletreeKit */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		3C7D7F7483F3F5AD67148F31 /* Wiffletree */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B71424B2345C9C29C85F7525 /* Build configuration list for PBXNativeTarget "Wiffletree" */;
+			buildPhases = (
+				B610252F101DE62431E62FB1 /* Sources */,
+				D171449F225644ECFDEA32A2 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Wiffletree;
+			packageProductDependencies = (
+				04F7EF1C1A56C5D53BD2EA47 /* WiffletreeKit */,
+			);
+			productName = Wiffletree;
+			productReference = B3AC9290B47DD6DAD16E4594 /* Wiffletree.app */;
+			productType = "com.apple.product-type.application";
+		};
+		4A542F16C41F96C7FAC7C62A /* WiffletreeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6E9A015EA3D34F569196DA0C /* Build configuration list for PBXNativeTarget "WiffletreeTests" */;
+			buildPhases = (
+				9A02CB01DB45EAB7A7278591 /* Sources */,
+				06246EDE50EEEB21F995A8DA /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				4DF0D759A79664674EBC8BC7 /* PBXTargetDependency */,
+			);
+			name = WiffletreeTests;
+			packageProductDependencies = (
+				B077928465509A90E540E904 /* WiffletreeKit */,
+			);
+			productName = WiffletreeTests;
+			productReference = 8ECDF811F59A9E1CD588C31B /* WiffletreeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		4DD95EC33D6FA4B5B8DD9131 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					3C7D7F7483F3F5AD67148F31 = {
+						DevelopmentTeam = "";
+					};
+					4A542F16C41F96C7FAC7C62A = {
+						DevelopmentTeam = "";
+					};
+				};
+			};
+			buildConfigurationList = 599F43496A44B64147BC7708 /* Build configuration list for PBXProject "Wiffletree" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 960B163ABED81E2D1943A1E5;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F59F290E3E66DA7B7B1E0595 /* XCLocalSwiftPackageReference "Packages/WiffletreeKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				3C7D7F7483F3F5AD67148F31 /* Wiffletree */,
+				4A542F16C41F96C7FAC7C62A /* WiffletreeTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		9A02CB01DB45EAB7A7278591 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AE2216CC3B4B5E9C1F17D9C9 /* KeychainKeyStoreTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B610252F101DE62431E62FB1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A34207F3807DFBCF613CD6C5 /* WiffletreeApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		4DF0D759A79664674EBC8BC7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3C7D7F7483F3F5AD67148F31 /* Wiffletree */;
+			targetProxy = 9BFE9D3EBF5ABFBD102B4664 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		112F7953A1C23B9136E27444 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.vyttle.wiffletreetests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Wiffletree.app/Wiffletree";
+			};
+			name = Debug;
+		};
+		40AD4CED9EF432246374AAAA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Wiffletree/Wiffletree.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Wiffletree/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.vyttle.wiffletree;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		6855CFFEA9DB36A5583B1BF1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6;
+			};
+			name = Debug;
+		};
+		8614DAF3E09A6D7CAAD5219D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6;
+			};
+			name = Release;
+		};
+		B000AB8EEE687D2E86629DEB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.vyttle.wiffletreetests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Wiffletree.app/Wiffletree";
+			};
+			name = Release;
+		};
+		EB94330BF5FCF665121BBA65 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Wiffletree/Wiffletree.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Wiffletree/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.vyttle.wiffletree;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		599F43496A44B64147BC7708 /* Build configuration list for PBXProject "Wiffletree" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6855CFFEA9DB36A5583B1BF1 /* Debug */,
+				8614DAF3E09A6D7CAAD5219D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6E9A015EA3D34F569196DA0C /* Build configuration list for PBXNativeTarget "WiffletreeTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				112F7953A1C23B9136E27444 /* Debug */,
+				B000AB8EEE687D2E86629DEB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B71424B2345C9C29C85F7525 /* Build configuration list for PBXNativeTarget "Wiffletree" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				40AD4CED9EF432246374AAAA /* Debug */,
+				EB94330BF5FCF665121BBA65 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		F59F290E3E66DA7B7B1E0595 /* XCLocalSwiftPackageReference "Packages/WiffletreeKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/WiffletreeKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		04F7EF1C1A56C5D53BD2EA47 /* WiffletreeKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = WiffletreeKit;
+		};
+		B077928465509A90E540E904 /* WiffletreeKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = WiffletreeKit;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 4DD95EC33D6FA4B5B8DD9131 /* Project object */;
+}

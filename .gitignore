@@ -1,0 +1,29 @@
+# macOS
+.DS_Store
+._*
+
+# Xcode
+build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+*.ipa
+*.dSYM
+*.dSYM.zip
+
+# Swift Package Manager
+# Local packages live in Packages/ on purpose; .build/ matches at any depth.
+.build/
+.swiftpm/
+
+# Secrets / local env
+.env
+.env.*
+!.env.example
+*.p8
+
+# Editors
+.vscode/
+.idea/
+*.swp
+

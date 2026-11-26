@@ -7,10 +7,37 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		005F1DCADB17ADCD137CC60F /* HostDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C75E78D6AB26B3B3DA839B7E /* HostDetailView.swift */; };
+		0C1D0E18A6FC0DA270E1F1C7 /* HostRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17E17D499F5C03C9EAF322A /* HostRow.swift */; };
 		0EE3782D68F4CC022A49FBAF /* WiffletreeKit in Frameworks */ = {isa = PBXBuildFile; productRef = B077928465509A90E540E904 /* WiffletreeKit */; };
+		106657F8A1271564FDE59EB2 /* HostID.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5F6B205E3E75408EC5659FA /* HostID.swift */; };
+		1198E526A70C591CF09B89C9 /* HostsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BC780B5BF15563D3FAA14DC /* HostsView.swift */; };
+		132FABC6FA3AB4AAF501CA50 /* SettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6F2BD0976D1B457E496120E /* SettingsTab.swift */; };
+		1C6C123803145680EBF440D7 /* FakeConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18D6A184598BCC3169B22C9E /* FakeConnection.swift */; };
+		200222B34DA94F995EF15434 /* LiveHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4CFF8F7EB17C35F4A9774EC /* LiveHost.swift */; };
+		31A55F3056A7360EF5B7BB70 /* HostStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52527B2E6E713C7831A4C3CF /* HostStatus.swift */; };
+		453677814C2E05B8FD0A088F /* PairingSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19170217C3A6B50F40AB331 /* PairingSteps.swift */; };
+		4B99EB9BD0D6426B3A035446 /* PairingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EECE9E789637E8A73017757A /* PairingFlowView.swift */; };
+		51CE38896C4B5356F19AC6F6 /* UsageTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF21FB205521AE0C87702C0A /* UsageTab.swift */; };
+		5493F04E480D3331503ECEF6 /* ProjectsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDFD1D7EB95ADADA504BF360 /* ProjectsTab.swift */; };
+		56F0B9DBF2BD9A927B4E0151 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87A377B171F1292A8E9CF667 /* WelcomeView.swift */; };
 		57E758028A8CD3129AA68643 /* WiffletreeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 04F7EF1C1A56C5D53BD2EA47 /* WiffletreeKit */; };
+		595DE090609398987AD8CFBA /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F6C765B9CE3D12F3B7DF516 /* AppModel.swift */; };
+		6D55FFBDBA253343D9BA1844 /* ScanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A37FB3A91D415317F50C234 /* ScanView.swift */; };
+		82115B73687CA4B68690B9C0 /* LiveDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40B9918EC42AEC64DA48E64E /* LiveDependencies.swift */; };
+		8A002A24D344575CFA4B3DAE /* InboxTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = C73C2D231D6D06DFE916CAD4 /* InboxTab.swift */; };
+		9589D71358980E19FE8982B2 /* Preferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E774814CE8BC91C361DAF9E /* Preferences.swift */; };
+		97E1D3881C29502258DDB059 /* QRScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1309D0F995FC8B0AC3FBC91 /* QRScanner.swift */; };
 		A34207F3807DFBCF613CD6C5 /* WiffletreeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FEC773F74277BC493C98F1B /* WiffletreeApp.swift */; };
+		ACED3FB857DC00F62D4E7631 /* HostHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBDB2861CE04941B64BAD88A /* HostHeader.swift */; };
 		AE2216CC3B4B5E9C1F17D9C9 /* KeychainKeyStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD49BF6752A871CA67D1742B /* KeychainKeyStoreTests.swift */; };
+		B1A316518D959E82FEEC6EC1 /* PairingFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31C24E9F0C6D26889C1F7A2C /* PairingFlow.swift */; };
+		B6D04F0F7238B2FB8F7D71F7 /* HostShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC9C7CFD90F2B29C68539962 /* HostShell.swift */; };
+		B93E89CD79631F5D4CE93A69 /* AppModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1591F301BA6E52996067F2BF /* AppModelTests.swift */; };
+		DA124F4FBBA588C43DC71361 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45B638EF695D0AE4582EB21F /* RootView.swift */; };
+		E21B63F5EA0AFA93D475270F /* ConfirmPairingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74715DA3455A6C83B8D9739D /* ConfirmPairingSheet.swift */; };
+		EA687C9E64565F08B6840542 /* WiffletreeDesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = 1CB5AF83C258C75752385D67 /* WiffletreeDesignSystem */; };
+		EF812C50EB0361111A906F62 /* KeyChangedCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4887661BCB87CDF1329B712F /* KeyChangedCard.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -24,13 +51,40 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0E774814CE8BC91C361DAF9E /* Preferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Preferences.swift; sourceTree = "<group>"; };
+		1591F301BA6E52996067F2BF /* AppModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelTests.swift; sourceTree = "<group>"; };
+		18D6A184598BCC3169B22C9E /* FakeConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FakeConnection.swift; sourceTree = "<group>"; };
+		31C24E9F0C6D26889C1F7A2C /* PairingFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingFlow.swift; sourceTree = "<group>"; };
+		40B9918EC42AEC64DA48E64E /* LiveDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveDependencies.swift; sourceTree = "<group>"; };
 		42418774F60D581CEE638F7B /* Wiffletree.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Wiffletree.entitlements; sourceTree = "<group>"; };
+		45B638EF695D0AE4582EB21F /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		4887661BCB87CDF1329B712F /* KeyChangedCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyChangedCard.swift; sourceTree = "<group>"; };
+		4963B9B41758F113BCD332F9 /* WiffletreeDesignSystem */ = {isa = PBXFileReference; lastKnownFileType = folder; name = WiffletreeDesignSystem; path = Packages/WiffletreeDesignSystem; sourceTree = SOURCE_ROOT; };
+		4F6C765B9CE3D12F3B7DF516 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		4FEC773F74277BC493C98F1B /* WiffletreeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WiffletreeApp.swift; sourceTree = "<group>"; };
+		52527B2E6E713C7831A4C3CF /* HostStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostStatus.swift; sourceTree = "<group>"; };
+		5A37FB3A91D415317F50C234 /* ScanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanView.swift; sourceTree = "<group>"; };
+		74715DA3455A6C83B8D9739D /* ConfirmPairingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmPairingSheet.swift; sourceTree = "<group>"; };
+		87A377B171F1292A8E9CF667 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		8ECDF811F59A9E1CD588C31B /* WiffletreeTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = WiffletreeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9BC780B5BF15563D3FAA14DC /* HostsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostsView.swift; sourceTree = "<group>"; };
+		A1309D0F995FC8B0AC3FBC91 /* QRScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScanner.swift; sourceTree = "<group>"; };
+		A17E17D499F5C03C9EAF322A /* HostRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostRow.swift; sourceTree = "<group>"; };
+		AF21FB205521AE0C87702C0A /* UsageTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTab.swift; sourceTree = "<group>"; };
 		B0F936A50728D61AC902C918 /* WiffletreeKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = WiffletreeKit; path = Packages/WiffletreeKit; sourceTree = SOURCE_ROOT; };
 		B3AC9290B47DD6DAD16E4594 /* Wiffletree.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Wiffletree.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B6F2BD0976D1B457E496120E /* SettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTab.swift; sourceTree = "<group>"; };
+		C73C2D231D6D06DFE916CAD4 /* InboxTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxTab.swift; sourceTree = "<group>"; };
+		C75E78D6AB26B3B3DA839B7E /* HostDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostDetailView.swift; sourceTree = "<group>"; };
+		DBDB2861CE04941B64BAD88A /* HostHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostHeader.swift; sourceTree = "<group>"; };
 		DC64189FDEFBA7588EF7892D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		DD49BF6752A871CA67D1742B /* KeychainKeyStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainKeyStoreTests.swift; sourceTree = "<group>"; };
+		DDFD1D7EB95ADADA504BF360 /* ProjectsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectsTab.swift; sourceTree = "<group>"; };
+		E19170217C3A6B50F40AB331 /* PairingSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingSteps.swift; sourceTree = "<group>"; };
+		E4CFF8F7EB17C35F4A9774EC /* LiveHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveHost.swift; sourceTree = "<group>"; };
+		EECE9E789637E8A73017757A /* PairingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingFlowView.swift; sourceTree = "<group>"; };
+		F5F6B205E3E75408EC5659FA /* HostID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostID.swift; sourceTree = "<group>"; };
+		FC9C7CFD90F2B29C68539962 /* HostShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostShell.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -47,6 +101,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				57E758028A8CD3129AA68643 /* WiffletreeKit in Frameworks */,
+				EA687C9E64565F08B6840542 /* WiffletreeDesignSystem in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -57,18 +112,77 @@
 			isa = PBXGroup;
 			children = (
 				DC64189FDEFBA7588EF7892D /* Info.plist */,
+				45B638EF695D0AE4582EB21F /* RootView.swift */,
 				42418774F60D581CEE638F7B /* Wiffletree.entitlements */,
 				4FEC773F74277BC493C98F1B /* WiffletreeApp.swift */,
+				3813BDB34EC359EBEE1023E7 /* Hosts */,
+				9AA416BCDD3DB314814E8660 /* Inbox */,
+				86C1688DDC00C2A02AC11FB9 /* Model */,
+				A2AD19155260713C6F7DD8C3 /* Pairing */,
+				506FCCD2D25F42B26605A922 /* Projects */,
+				0A65B4712AA8BD66246755D3 /* Settings */,
+				C522C14BEC0DCD695FA853F4 /* Shell */,
+				4459978FC7AEAAD5FCDEF423 /* Usage */,
 			);
 			path = Wiffletree;
+			sourceTree = "<group>";
+		};
+		0A65B4712AA8BD66246755D3 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				B6F2BD0976D1B457E496120E /* SettingsTab.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		3813BDB34EC359EBEE1023E7 /* Hosts */ = {
+			isa = PBXGroup;
+			children = (
+				C75E78D6AB26B3B3DA839B7E /* HostDetailView.swift */,
+				A17E17D499F5C03C9EAF322A /* HostRow.swift */,
+				9BC780B5BF15563D3FAA14DC /* HostsView.swift */,
+				4887661BCB87CDF1329B712F /* KeyChangedCard.swift */,
+			);
+			path = Hosts;
+			sourceTree = "<group>";
+		};
+		4459978FC7AEAAD5FCDEF423 /* Usage */ = {
+			isa = PBXGroup;
+			children = (
+				AF21FB205521AE0C87702C0A /* UsageTab.swift */,
+			);
+			path = Usage;
+			sourceTree = "<group>";
+		};
+		506FCCD2D25F42B26605A922 /* Projects */ = {
+			isa = PBXGroup;
+			children = (
+				DDFD1D7EB95ADADA504BF360 /* ProjectsTab.swift */,
+			);
+			path = Projects;
 			sourceTree = "<group>";
 		};
 		5E409427D0B6D6A21B7D2F0A /* WiffletreeTests */ = {
 			isa = PBXGroup;
 			children = (
+				1591F301BA6E52996067F2BF /* AppModelTests.swift */,
 				DD49BF6752A871CA67D1742B /* KeychainKeyStoreTests.swift */,
+				D1D531BA71A0D77FED0A04D7 /* Support */,
 			);
 			path = WiffletreeTests;
+			sourceTree = "<group>";
+		};
+		86C1688DDC00C2A02AC11FB9 /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				4F6C765B9CE3D12F3B7DF516 /* AppModel.swift */,
+				F5F6B205E3E75408EC5659FA /* HostID.swift */,
+				52527B2E6E713C7831A4C3CF /* HostStatus.swift */,
+				40B9918EC42AEC64DA48E64E /* LiveDependencies.swift */,
+				E4CFF8F7EB17C35F4A9774EC /* LiveHost.swift */,
+				0E774814CE8BC91C361DAF9E /* Preferences.swift */,
+			);
+			path = Model;
 			sourceTree = "<group>";
 		};
 		9177A89AECFC07C2B74C259F /* Products */ = {
@@ -90,12 +204,52 @@
 			);
 			sourceTree = "<group>";
 		};
+		9AA416BCDD3DB314814E8660 /* Inbox */ = {
+			isa = PBXGroup;
+			children = (
+				C73C2D231D6D06DFE916CAD4 /* InboxTab.swift */,
+			);
+			path = Inbox;
+			sourceTree = "<group>";
+		};
+		A2AD19155260713C6F7DD8C3 /* Pairing */ = {
+			isa = PBXGroup;
+			children = (
+				74715DA3455A6C83B8D9739D /* ConfirmPairingSheet.swift */,
+				31C24E9F0C6D26889C1F7A2C /* PairingFlow.swift */,
+				EECE9E789637E8A73017757A /* PairingFlowView.swift */,
+				E19170217C3A6B50F40AB331 /* PairingSteps.swift */,
+				A1309D0F995FC8B0AC3FBC91 /* QRScanner.swift */,
+				5A37FB3A91D415317F50C234 /* ScanView.swift */,
+				87A377B171F1292A8E9CF667 /* WelcomeView.swift */,
+			);
+			path = Pairing;
+			sourceTree = "<group>";
+		};
 		BB883C59646EA834AEB7E1AB /* Packages */ = {
 			isa = PBXGroup;
 			children = (
+				4963B9B41758F113BCD332F9 /* WiffletreeDesignSystem */,
 				B0F936A50728D61AC902C918 /* WiffletreeKit */,
 			);
 			path = Packages;
+			sourceTree = "<group>";
+		};
+		C522C14BEC0DCD695FA853F4 /* Shell */ = {
+			isa = PBXGroup;
+			children = (
+				DBDB2861CE04941B64BAD88A /* HostHeader.swift */,
+				FC9C7CFD90F2B29C68539962 /* HostShell.swift */,
+			);
+			path = Shell;
+			sourceTree = "<group>";
+		};
+		D1D531BA71A0D77FED0A04D7 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				18D6A184598BCC3169B22C9E /* FakeConnection.swift */,
+			);
+			path = Support;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -115,6 +269,7 @@
 			name = Wiffletree;
 			packageProductDependencies = (
 				04F7EF1C1A56C5D53BD2EA47 /* WiffletreeKit */,
+				1CB5AF83C258C75752385D67 /* WiffletreeDesignSystem */,
 			);
 			productName = Wiffletree;
 			productReference = B3AC9290B47DD6DAD16E4594 /* Wiffletree.app */;
@@ -168,6 +323,7 @@
 			mainGroup = 960B163ABED81E2D1943A1E5;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				C70C758C7059349B189C616D /* XCLocalSwiftPackageReference "Packages/WiffletreeDesignSystem" */,
 				F59F290E3E66DA7B7B1E0595 /* XCLocalSwiftPackageReference "Packages/WiffletreeKit" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -185,6 +341,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B93E89CD79631F5D4CE93A69 /* AppModelTests.swift in Sources */,
+				1C6C123803145680EBF440D7 /* FakeConnection.swift in Sources */,
 				AE2216CC3B4B5E9C1F17D9C9 /* KeychainKeyStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -193,6 +351,30 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				595DE090609398987AD8CFBA /* AppModel.swift in Sources */,
+				E21B63F5EA0AFA93D475270F /* ConfirmPairingSheet.swift in Sources */,
+				005F1DCADB17ADCD137CC60F /* HostDetailView.swift in Sources */,
+				ACED3FB857DC00F62D4E7631 /* HostHeader.swift in Sources */,
+				106657F8A1271564FDE59EB2 /* HostID.swift in Sources */,
+				0C1D0E18A6FC0DA270E1F1C7 /* HostRow.swift in Sources */,
+				B6D04F0F7238B2FB8F7D71F7 /* HostShell.swift in Sources */,
+				31A55F3056A7360EF5B7BB70 /* HostStatus.swift in Sources */,
+				1198E526A70C591CF09B89C9 /* HostsView.swift in Sources */,
+				8A002A24D344575CFA4B3DAE /* InboxTab.swift in Sources */,
+				EF812C50EB0361111A906F62 /* KeyChangedCard.swift in Sources */,
+				82115B73687CA4B68690B9C0 /* LiveDependencies.swift in Sources */,
+				200222B34DA94F995EF15434 /* LiveHost.swift in Sources */,
+				B1A316518D959E82FEEC6EC1 /* PairingFlow.swift in Sources */,
+				4B99EB9BD0D6426B3A035446 /* PairingFlowView.swift in Sources */,
+				453677814C2E05B8FD0A088F /* PairingSteps.swift in Sources */,
+				9589D71358980E19FE8982B2 /* Preferences.swift in Sources */,
+				5493F04E480D3331503ECEF6 /* ProjectsTab.swift in Sources */,
+				97E1D3881C29502258DDB059 /* QRScanner.swift in Sources */,
+				DA124F4FBBA588C43DC71361 /* RootView.swift in Sources */,
+				6D55FFBDBA253343D9BA1844 /* ScanView.swift in Sources */,
+				132FABC6FA3AB4AAF501CA50 /* SettingsTab.swift in Sources */,
+				51CE38896C4B5356F19AC6F6 /* UsageTab.swift in Sources */,
+				56F0B9DBF2BD9A927B4E0151 /* WelcomeView.swift in Sources */,
 				A34207F3807DFBCF613CD6C5 /* WiffletreeApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -440,6 +622,10 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
+		C70C758C7059349B189C616D /* XCLocalSwiftPackageReference "Packages/WiffletreeDesignSystem" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/WiffletreeDesignSystem;
+		};
 		F59F290E3E66DA7B7B1E0595 /* XCLocalSwiftPackageReference "Packages/WiffletreeKit" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/WiffletreeKit;
@@ -450,6 +636,10 @@
 		04F7EF1C1A56C5D53BD2EA47 /* WiffletreeKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = WiffletreeKit;
+		};
+		1CB5AF83C258C75752385D67 /* WiffletreeDesignSystem */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = WiffletreeDesignSystem;
 		};
 		B077928465509A90E540E904 /* WiffletreeKit */ = {
 			isa = XCSwiftPackageProductDependency;

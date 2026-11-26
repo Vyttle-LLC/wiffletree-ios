@@ -17,7 +17,10 @@ SwiftUI, Swift 6 strict concurrency, iOS 26+. One XcodeGen project; the app targ
   - `KeyStore` — `KeychainKeyStore` for the app, `InMemoryKeyStore` for tests.
   - `Connection/` — the network client. `NetworkDialer` opens TLS 1.3 pinned to the host's key and a WebSocket (Network.framework); `AddressRace` tries a host's addresses at once with the key-change rules; `HostPairer` pairs by `qr` on `/pair` and keeps the host in a `PairedHostStore`; `RemoteHostConnection` answers the `/v1` challenge, says `Hello`, sends typed `HostCommand`s, streams events and reconnects with the last cursor. `HostConnection` is the protocol a demo host can implement too. `HostModels` and `HostCommands` hold only what the first screens need; unknown fields, states and event kinds are tolerated.
   - `Demo/` — `DemoHostConnection`, the built-in "Demo Mac" (App Review's demo mode): `DemoSeed`'s workspace in memory, no network, canned replies after an injectable delay, events with the real cursor rules. Commands it cannot simulate fail with "Not available in the demo." Keep the seed telling the story of `design/mockups/`.
+- **`WiffletreeDesignSystem`** — the Tidal tokens (`Tidal`, light and dark, from `design/mockups/styles.css`) and the shared components: buttons, chips, badges, the demo tag, status labels, icon tiles, the symbol. SwiftUI, iOS only.
 - **`Wiffletree/`** — the app. `Info.plist` and the entitlements are generated from `project.yml`; edit them there.
+  - `Model/` — `AppModel` (paired hosts, the demo host, the selection) and `LiveHost` (one host's connection, state and snapshot, kept current from its events on the main actor). Views stay thin over these.
+  - `Pairing/`, `Hosts/`, `Shell/` (the tab bar and the host header with its menu), and one folder per tab: `Projects/`, `Inbox/`, `Usage/`, `Settings/`. Keep the tab folders independent of each other.
 - **`WiffletreeTests/`** — tests that need the app as host (the Keychain needs a signed app's entitlements).
 - **`design/`** — HTML mockups; not part of the build.
 

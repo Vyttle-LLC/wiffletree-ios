@@ -39,6 +39,39 @@ public struct HostAddress: Hashable, Codable, Sendable, CustomStringConvertible 
     /// `.local`, or a Tailscale address (`100.64.0.0/10`, `fd7a:115c:a1e0::/48`). Another key
     /// there means the host's key changed; any other IP address may pass to another machine.
     public var namesOneMachine: Bool {
+        isTailscaleAddress || (IPv4Address(host) == nil && IPv6Address(host) == nil)
+    }
+
+    /// How the device reaches the host at this address.
+    public enum Network: Sendable {
+        /// A private, link-local or `.local` address: the same Wi-Fi as the host.
+        case local
+        /// A Tailscale address or a MagicDNS name under `.ts.net`.
+        case tailscale
+        /// Anything else, such as another VPN's name or address.
+        case otherVPN
+    }
+
+    public var network: Network {
+        if isTailscaleAddress || host.lowercased().hasSuffix(".ts.net") { return .tailscale }
+        if host.lowercased().hasSuffix(".local") { return .local }
+        if let ip = IPv4Address(host) {
+            let octets = Array(ip.rawValue)
+            let isLocal = octets[0] == 10
+                || (octets[0] == 172 && octets[1] & 0xf0 == 16)
+                || (octets[0] == 192 && octets[1] == 168)
+                || (octets[0] == 169 && octets[1] == 254)
+            return isLocal ? .local : .otherVPN
+        }
+        if let ip = IPv6Address(host) {
+            let first = Array(ip.rawValue.prefix(2))
+            let isLocal = first[0] & 0xfe == 0xfc || (first[0] == 0xfe && first[1] & 0xc0 == 0x80)
+            return isLocal ? .local : .otherVPN
+        }
+        return .otherVPN
+    }
+
+    private var isTailscaleAddress: Bool {
         if let ip = IPv4Address(host) {
             let octets = Array(ip.rawValue)
             return octets[0] == 100 && octets[1] & 0xc0 == 64
@@ -46,6 +79,6 @@ public struct HostAddress: Hashable, Codable, Sendable, CustomStringConvertible 
         if let ip = IPv6Address(host) {
             return Array(ip.rawValue.prefix(6)) == [0xfd, 0x7a, 0x11, 0x5c, 0xa1, 0xe0]
         }
-        return true
+        return false
     }
 }

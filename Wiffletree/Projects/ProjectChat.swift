@@ -62,6 +62,8 @@ final class ProjectChat {
     var draft = ""
     /// Photos to send with the draft, in the order chosen.
     private(set) var photos: [ComposerPhoto] = []
+    /// Photos chosen but still being converted; Send waits for them.
+    private(set) var converting = 0
     /// Sent attachments' thumbnails by path, as far as they have loaded.
     private(set) var thumbnails: [String: UIImage] = [:]
     /// Sent attachments whose image could not be read, shown by name instead.
@@ -90,7 +92,7 @@ final class ProjectChat {
     }
 
     var canSend: Bool {
-        (!body.isEmpty || !photos.isEmpty) && !isSending && coordinator != nil
+        (!body.isEmpty || !photos.isEmpty) && converting == 0 && !isSending && coordinator != nil
     }
 
     /// Whether the host takes photos from this iPhone: it offers uploads and lets it make changes.
@@ -107,6 +109,15 @@ final class ProjectChat {
     }
 
     private var body: String { draft.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    /// Loads and converts each chosen photo off the main actor, attaching them in the order chosen.
+    func attach(_ loads: [@Sendable () async -> Photo?]) async {
+        converting += loads.count
+        for load in loads {
+            if let photo = await Task.detached(operation: load).value { attach(photo) }
+            converting -= 1
+        }
+    }
 
     func attach(_ photo: Photo) {
         photosNamed += 1

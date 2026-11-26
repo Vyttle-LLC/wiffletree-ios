@@ -137,6 +137,24 @@ struct ComposerTests {
         #expect(size.height == 600)
     }
 
+    @Test func sendWaitsForPhotosStillConverting() async throws {
+        let chat = try await chat()
+        chat.draft = "Look"
+        let photo = try #require(Photo(data: try cameraPhoto(width: 400, height: 300)))
+        let (gate, open) = AsyncStream<Void>.makeStream()
+        let attaching = Task { await chat.attach([{ for await _ in gate { break }; return photo }]) }
+        try await eventually { chat.converting == 1 }
+        #expect(!chat.canSend)
+        await chat.send()
+        #expect(chat.messages.last?.body != "Look", "nothing is sent without the photo")
+
+        open.yield()
+        await attaching.value
+        #expect(chat.converting == 0)
+        #expect(chat.photos.map(\.upload.name) == ["Photo 1.jpg"])
+        #expect(chat.canSend)
+    }
+
     @Test func photosAreAttachedAndRemovedAndAloneMakeAMessage() async throws {
         let chat = try await chat()
         #expect(chat.canAttach)

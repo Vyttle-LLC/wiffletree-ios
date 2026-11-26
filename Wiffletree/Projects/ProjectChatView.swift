@@ -370,11 +370,14 @@ private struct Composer: View {
         .onChange(of: chosen) { _, items in
             guard !items.isEmpty else { return }
             chosen = []
-            Task { await attach(items) }
+            let loads = items.map { item in
+                { @Sendable in (try? await item.loadTransferable(type: Data.self)).flatMap(Photo.init(data:)) }
+            }
+            Task { await chat.attach(loads) }
         }
         .fullScreenCover(isPresented: $isTakingPhoto) {
             CameraPicker { image in
-                if let photo = Photo(image: image) { chat.attach(photo) }
+                Task { await chat.attach([{ Photo(image: image) }]) }
             }
             .ignoresSafeArea()
         }
@@ -405,8 +408,8 @@ private struct Composer: View {
                     .accessibilityLabel("Uploading photos")
             }
             TextField(placeholder, text: $chat.draft, axis: .vertical)
-                    .lineLimit(1...5)
-                    .disabled(isViewOnly)
+                .lineLimit(1...5)
+                .disabled(isViewOnly)
             if dictation.isListening {
                 Waveform(levels: dictation.levels)
             }
@@ -441,15 +444,6 @@ private struct Composer: View {
             Task { await chat.send() }
         }
         .disabled(!chat.canSend || isViewOnly)
-    }
-
-    /// Converts each chosen photo off the main actor, keeping the order chosen.
-    private func attach(_ items: [PhotosPickerItem]) async {
-        for item in items {
-            guard let data = try? await item.loadTransferable(type: Data.self) else { continue }
-            let photo = await Task.detached { Photo(data: data) }.value
-            if let photo { chat.attach(photo) }
-        }
     }
 
     private var placeholder: String {

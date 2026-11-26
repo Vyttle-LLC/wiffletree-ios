@@ -66,7 +66,9 @@ final class ProjectChat {
     private(set) var isLoadingEarlier = false
     /// The coordinator's latest run; its narration shows while it runs.
     private(set) var turn: StepPage?
-    /// Why the last load failed, until one succeeds.
+    /// Whether the newest messages have loaded once; until then the chat shows it is loading.
+    private(set) var hasLoaded = false
+    /// Why the last load failed, until the newest messages load again.
     private(set) var failure: String?
     /// Why the last send failed, until a send succeeds; sending again retries it.
     private(set) var sendFailure: String?
@@ -234,8 +236,9 @@ final class ProjectChat {
         }
     }
 
-    /// The newest messages and the whole latest turn: on opening, and after events were lost.
-    private func reloadAll() async {
+    /// The newest messages and the whole latest turn: on opening, after events were lost, and
+    /// when the person retries a failed load.
+    func reloadAll() async {
         await load { coordinator in
             try await reloadMessages(of: coordinator)
             turn = try await host.connection.request(StepsCommand(sessionID: coordinator))
@@ -249,6 +252,8 @@ final class ProjectChat {
     private func reloadMessages(of coordinator: String) async throws {
         let page = try await host.connection.request(MessagesCommand(sessionID: coordinator, limit: pageSize))
         mergeNewest(page)
+        hasLoaded = true
+        failure = nil
     }
 
     /// Takes the newest page as the truth from its oldest message on, keeping the loaded messages
@@ -275,11 +280,12 @@ final class ProjectChat {
         }
     }
 
+    /// Runs `fetch` for the coordinator, noting why it failed. Only the newest messages loading
+    /// clears that, so a turn's steps arriving never hides a conversation that did not load.
     private func load(_ fetch: (_ coordinator: String) async throws -> Void) async {
         guard let coordinator else { return }
         do {
             try await fetch(coordinator.id)
-            failure = nil
         } catch {
             failure = error.localizedDescription
         }

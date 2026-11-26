@@ -26,6 +26,7 @@ private func demoHost(sleep: @escaping @Sendable (Duration) async throws -> Void
 /// Ids of the demo seed, which the app's tests cannot reach as `DemoID`.
 private enum Seed {
     static let tideAlerts = "demo-tide-alerts"
+    static let tideCoordinator = "demo-tide-coordinator"
     static let stationMap = "demo-station-map"
     static let legacyImporter = "demo-legacy-importer"
 }
@@ -53,6 +54,40 @@ private final class RecordingConnection: HostConnection {
     }
 
     func close() {
+        demo.close()
+    }
+}
+
+/// The demo host failing its first `messages` read, as a host does while the connection is down,
+/// with events the test sends instead of the demo's.
+private final class FlakyConnection: HostConnection {
+    let events: AsyncStream<HostEvent>
+    private let eventSink: AsyncStream<HostEvent>.Continuation
+    private let demo = DemoHostConnection()
+    private let failingReads = Mutex(1)
+
+    init() {
+        (events, eventSink) = AsyncStream.makeStream()
+    }
+
+    var states: AsyncStream<ConnectionState> { demo.states }
+    var isDemo: Bool { true }
+
+    func yield(_ kind: HostEvent.Kind) {
+        eventSink.yield(HostEvent(cursor: Cursor(epoch: "test", seq: 1), kind: kind))
+    }
+
+    func request<Command: HostCommand>(_ command: Command) async throws -> Command.Reply {
+        let fails = command is MessagesCommand && failingReads.withLock { left in
+            defer { left = max(left - 1, 0) }
+            return left > 0
+        }
+        if fails { throw ConnectionError.closed }
+        return try await demo.request(command)
+    }
+
+    func close() {
+        eventSink.finish()
         demo.close()
     }
 }
@@ -253,6 +288,30 @@ struct ProjectChatTests {
         // The restarted demo starts over from its seed, which the refresh shows.
         try await eventually { chat.messages.count == 7 }
         #expect(chat.messages.map(\.id) == Array(loaded.prefix(7)))
+    }
+
+    /// The blank chat from the iPhone: the conversation failed to load while the connection was
+    /// down, then the busy coordinator's steps loaded and cleared the error, leaving no messages
+    /// and nothing saying why.
+    @Test func aFailedLoadStaysShownUntilTheMessagesLoad() async throws {
+        let flaky = FlakyConnection()
+        let host = LiveHost(id: .demo, paired: nil, lastSeen: nil, connect: { flaky })
+        try await eventually { host.snapshot != nil }
+        let chat = ProjectChat(host: host, projectID: Seed.tideAlerts)
+        let running = Task { await chat.run() }
+        defer { running.cancel() }
+        try await eventually { chat.failure != nil }
+        #expect(chat.messages.isEmpty)
+        #expect(!chat.hasLoaded)
+
+        flaky.yield(.steps(sessions: [Seed.tideCoordinator]))
+        try await eventually { chat.turn != nil }
+        #expect(chat.failure != nil)
+
+        await chat.reloadAll()
+        #expect(chat.failure == nil)
+        #expect(chat.hasLoaded)
+        #expect(!chat.messages.isEmpty)
     }
 
     @Test func anEmptyDraftCannotBeSent() async throws {

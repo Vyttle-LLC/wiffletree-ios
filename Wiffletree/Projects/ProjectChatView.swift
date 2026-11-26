@@ -32,8 +32,11 @@ struct ProjectChatView: View {
         }
         .sheet(isPresented: $isShowingAgents) { AgentsSheet(projectID: projectID) }
         .task { chat = chat ?? ProjectChat(host: host, projectID: projectID) }
-        // Runs again once the snapshot names the coordinator, which a cold start may not yet.
-        .task(id: [chat == nil ? "" : "chat", chat?.coordinator?.id ?? ""]) { await chat?.run() }
+        // Runs again once the snapshot names the coordinator, which a cold start may not yet, and
+        // when the connection comes back, keeping what is shown while it refreshes.
+        .task(id: [chat == nil ? "" : "chat", chat?.coordinator?.id ?? "", host.isConnected ? "connected" : ""]) {
+            await chat?.run()
+        }
     }
 
     private var subtitle: String {
@@ -57,6 +60,9 @@ private struct ChatContent: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 16) {
+                        if !chat.hasLoaded && chat.failure == nil {
+                            ProgressView().frame(maxWidth: .infinity)
+                        }
                         if chat.hasEarlier {
                             LoadEarlier(isLoading: chat.isLoadingEarlier) {
                                 let anchor = chat.messages.first?.id
@@ -84,11 +90,8 @@ private struct ChatContent: View {
                 .onChange(of: chat.liveNarration.last?.text) { proxy.scrollTo(bottom) }
             }
             if let failure = chat.failure {
-                Text(failure)
-                    .font(.footnote)
-                    .foregroundStyle(Tidal.red)
+                LoadFailure(text: failure) { Task { await chat.reloadAll() } }
                     .padding(.horizontal, 16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             WorkingBar(projectID: chat.projectID, isShowingAgents: $isShowingAgents)
             Composer(chat: chat, isViewOnly: host.level == .viewOnly, isDemo: host.isDemo)
@@ -134,6 +137,24 @@ private struct EntryView: View {
         let name = host.snapshot?.sessions.first { $0.id == sender }?.name ?? "An agent"
         // "Reviewer · Correctness" reads as "Reviewer" in the folded line.
         return name.components(separatedBy: " · ").first ?? name
+    }
+}
+
+/// Why the conversation did not load, with a retry.
+private struct LoadFailure: View {
+    let text: String
+    let retry: () -> Void
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Label("Couldn't load the conversation: \(text)", systemImage: "exclamationmark.circle")
+                .font(.footnote)
+                .foregroundStyle(Tidal.red)
+            Spacer(minLength: 8)
+            Button("Retry", action: retry)
+                .font(.footnote.weight(.semibold))
+                .tint(Tidal.accent)
+        }
     }
 }
 

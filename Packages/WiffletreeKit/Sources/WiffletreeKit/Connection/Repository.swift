@@ -89,29 +89,97 @@ public struct BranchRuleset: Decodable, Sendable {
     }
 }
 
-/// GitHub's branch patterns: `*` matches within one path segment, `**` across segments and `?`
-/// one character other than `/`; anything else matches itself.
+/// GitHub's branch patterns, as the host's `protected.rs` matches them: `*` matches a run
+/// within one folder, `**` any run (and `**/` no folder at all), `?` and `[...]` one character
+/// other than `/`; anything else matches itself. A pattern that cannot be read matches nothing.
 enum BranchPattern {
+    private enum Token: Equatable {
+        case char(Character)
+        case one
+        case star
+        case deepStar
+        case `class`(negated: Bool, ranges: [ClosedRange<Character>])
+    }
+
     static func matches(_ pattern: String, _ branch: String) -> Bool {
-        let pattern = Array(pattern), name = Array(branch)
-        // matched[i][j]: pattern[i...] matches name[j...].
-        var matched = Array(repeating: Array(repeating: false, count: name.count + 1), count: pattern.count + 1)
-        matched[pattern.count][name.count] = true
-        for i in stride(from: pattern.count - 1, through: 0, by: -1) {
-            let isDoubleStar = pattern[i] == "*" && i + 1 < pattern.count && pattern[i + 1] == "*"
-            for j in stride(from: name.count, through: 0, by: -1) {
-                switch pattern[i] {
-                case "*" where isDoubleStar:
-                    matched[i][j] = matched[i + 2][j] || (j < name.count && matched[i][j + 1])
-                case "*":
-                    matched[i][j] = matched[i + 1][j] || (j < name.count && name[j] != "/" && matched[i][j + 1])
-                case "?":
-                    matched[i][j] = j < name.count && name[j] != "/" && matched[i + 1][j + 1]
-                default:
-                    matched[i][j] = j < name.count && name[j] == pattern[i] && matched[i + 1][j + 1]
+        guard let tokens = parse(pattern) else { return false }
+        let name = Array(branch)
+        // matched[t][i]: tokens[t...] match name[i...]. Filled from the end, so each is decided once.
+        var matched = Array(repeating: Array(repeating: false, count: name.count + 1), count: tokens.count + 1)
+        matched[tokens.count][name.count] = true
+        for t in tokens.indices.reversed() {
+            // Whether the next token matches from some position at or after i, for `**`.
+            var nextFromHereOn = false
+            for i in (0...name.count).reversed() {
+                nextFromHereOn = nextFromHereOn || matched[t + 1][i]
+                let next = i < name.count ? name[i] : nil
+                let one = next.map { $0 != "/" } ?? false
+                switch tokens[t] {
+                case .char(let c):
+                    matched[t][i] = next == c && matched[t + 1][i + 1]
+                case .one:
+                    matched[t][i] = one && matched[t + 1][i + 1]
+                case .class(let negated, let ranges):
+                    matched[t][i] = one && ranges.contains { $0.contains(next!) } != negated && matched[t + 1][i + 1]
+                case .star:
+                    matched[t][i] = matched[t + 1][i] || (one && matched[t][i + 1])
+                case .deepStar:
+                    let noFolder = t + 1 < tokens.count && tokens[t + 1] == .char("/") && matched[t + 2][i]
+                    matched[t][i] = noFolder || nextFromHereOn
                 }
             }
         }
         return matched[0][0]
+    }
+
+    private static func parse(_ pattern: String) -> [Token]? {
+        var tokens: [Token] = []
+        var chars = pattern.makeIterator()
+        var peeked: Character?
+        func next() -> Character? {
+            defer { peeked = nil }
+            return peeked ?? chars.next()
+        }
+        func peek() -> Character? {
+            if peeked == nil { peeked = chars.next() }
+            return peeked
+        }
+        while let c = next() {
+            switch c {
+            case "*" where peek() == "*":
+                _ = next()
+                tokens.append(.deepStar)
+            case "*":
+                tokens.append(.star)
+            case "?":
+                tokens.append(.one)
+            case "[":
+                let negated = peek() == "!" || peek() == "^"
+                if negated { _ = next() }
+                var ranges: [ClosedRange<Character>] = []
+                // A `]` first in the class is one of its characters.
+                var first = true
+                while true {
+                    guard let c = next() else { return nil }
+                    if c == "]" && !first { break }
+                    first = false
+                    var end = c
+                    if peek() == "-" {
+                        _ = next()
+                        if let after = peek(), after != "]" {
+                            end = next()!
+                        } else {
+                            ranges.append("-"..."-")
+                        }
+                    }
+                    // A reversed range, such as `z-a`, holds nothing, as on the host.
+                    if c <= end { ranges.append(c...end) }
+                }
+                tokens.append(.class(negated: negated, ranges: ranges))
+            default:
+                tokens.append(.char(c))
+            }
+        }
+        return tokens
     }
 }

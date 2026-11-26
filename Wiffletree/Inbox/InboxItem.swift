@@ -30,8 +30,11 @@ struct InboxItem: Identifiable {
         return rest.isEmpty ? nil : rest
     }
 
-    /// Only a question can be dismissed; the others are approved or denied (design call 8).
     var isQuestion: Bool { kind == .question }
+
+    /// Only a question can be dismissed; the others are approved or denied (design call 8). A
+    /// UI evaluator run's Start card is answered too: dismissed, its run would wait forever.
+    var canDismiss: Bool { isQuestion && !attention.operationID.hasPrefix("evaluation:start:") }
 
     /// What the card's header says the item is, such as "Publish".
     var kindTitle: String {

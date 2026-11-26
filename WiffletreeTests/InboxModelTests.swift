@@ -131,6 +131,21 @@ struct InboxModelTests {
         let snapshot = try JSONDecoder().decode(Snapshot.self, from: Data(json.utf8))
         let item = InboxItem(snapshot.attention[0], in: snapshot)
         #expect(item.kind == .merge(isProtected: true, pullRequestURL: URL(string: "https://github.com/o/r/pull/9")))
-        #expect(!item.isQuestion)
+        #expect(!item.canDismiss)
+    }
+
+    @Test func onlyQuestionsOfferDismissAndAStartCardIsNotOne() throws {
+        let json = #"""
+        {"projects": [{"id": "p", "name": "Station map"}], "sessions": [],
+         "attention": [
+          {"id": "q", "projectId": "p", "sessionId": "c", "operationId": "map-tiles", "prompt": "Which tiles?"},
+          {"id": "allow", "projectId": "p", "sessionId": "c", "operationId": "evaluation:allow:p:", "prompt": "Allow UI evaluators?"},
+          {"id": "start", "projectId": "p", "sessionId": "c", "operationId": "evaluation:start:r1", "prompt": "Start the run?",
+           "options": ["Start now", "Later", "Skip these runs"]},
+          {"id": "perm", "projectId": "p", "sessionId": "c", "operationId": "permission:x", "prompt": "Allow?"}]}
+        """#
+        let snapshot = try JSONDecoder().decode(Snapshot.self, from: Data(json.utf8))
+        let dismissable = snapshot.attention.map { InboxItem($0, in: snapshot) }.filter(\.canDismiss).map(\.id)
+        #expect(dismissable == ["q", "allow"])
     }
 }

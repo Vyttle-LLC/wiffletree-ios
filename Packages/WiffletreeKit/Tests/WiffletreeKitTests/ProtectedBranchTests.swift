@@ -39,6 +39,44 @@ struct ProtectedBranchTests {
         #expect(snapshot.mergesIntoProtectedBranch(snapshot.tickets[0]) == isProtected)
     }
 
+    /// The host's `patterns_match_as_on_github` cases, from `workspace-core/src/protected.rs` on
+    /// feature/iphone-remote, then one for `**/` between literals.
+    private static let patternCases: [(pattern: String, matched: [String], unmatched: [String])] = [
+        ("main", ["main"], ["main2", "Main", "x/main"]),
+        ("release/*", ["release/2026.10"], ["release/2026/10", "releases/x", "release"]),
+        ("release/**", ["release/2026/10", "release/x"], ["releases/x"]),
+        ("*release*", ["release", "prerelease", "releases"], ["feature/release"]),
+        ("qa/**/*", ["qa/foo", "qa/foo/bar"], ["qa"]),
+        ("releases/**/*", ["releases/v1/x", "releases/v1"], ["release/v1"]),
+        ("v[0-9]", ["v1"], ["va", "v10"]),
+        ("v[!0-9]", ["va"], ["v1", "v/"]),
+        ("v[^0-9]", ["va"], ["v1"]),
+        ("v?", ["v1"], ["v/", "v12"]),
+        ("[]a]x", ["]x", "ax"], ["bx"]),
+        ("x[a-]", ["xa", "x-"], ["xb"]),
+        ("**", ["any/thing", "main"], []),
+        ("release/[0-9", [], ["release/[0-9"]),
+        ("a/**/b", ["a/b", "a/x/b"], ["a/xb"]),
+    ]
+
+    @Test func patternsMatchAsOnTheHost() {
+        for (pattern, matched, unmatched) in Self.patternCases {
+            for branch in matched {
+                let isMatch = BranchPattern.matches(pattern, branch)
+                #expect(isMatch, "\(pattern) should match \(branch)")
+            }
+            for branch in unmatched {
+                let isMatch = BranchPattern.matches(pattern, branch)
+                #expect(!isMatch, "\(pattern) should not match \(branch)")
+            }
+        }
+    }
+
+    @Test func starsInARowDecideAtOnce() {
+        let stars = String(repeating: "*a", count: 24) + "b"
+        #expect(!BranchPattern.matches(stars, String(repeating: "a", count: 60)))
+    }
+
     @Test func aTicketInAnUnlistedRepositoryCountsAsProtected() throws {
         let snapshot = try snapshot(base: "feature/sync", repository: #"{"id":"r2","name":"other","path":"/o","base":"origin/main"}"#)
         #expect(snapshot.mergesIntoProtectedBranch(snapshot.tickets[0]))

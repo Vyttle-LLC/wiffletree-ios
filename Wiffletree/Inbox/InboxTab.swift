@@ -76,7 +76,7 @@ private struct NeedsYouList: View {
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            if item.isQuestion && model.canAnswer {
+                            if item.canDismiss && model.canAnswer {
                                 Button("Dismiss", systemImage: "xmark") {
                                     Task { await model.dismiss(item) }
                                 }

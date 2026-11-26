@@ -3,7 +3,8 @@ import Observation
 import WiffletreeKit
 
 /// The host's account limits and its last week of tokens, read again when the host says usage
-/// changed. Both cover the whole host, every project and provider.
+/// changed, after a resync and on each reconnection. Both cover the whole host, every project
+/// and provider.
 @MainActor
 @Observable
 final class UsageModel {
@@ -17,13 +18,30 @@ final class UsageModel {
 
     init(host: LiveHost) {
         self.host = host
+        watchConnection()
     }
 
-    /// Reads now, then each time the host reports a usage change, until cancelled.
+    /// Reads now, then each time the host reports a usage change or a resync, until cancelled.
     func follow() async {
         await load()
-        for await event in host.events() where event.kind == .usage {
-            await load()
+        while !Task.isCancelled {
+            for await event in host.events() where event.kind == .usage || event.kind == .resync {
+                await load()
+            }
+            // The stream ends when the host's connection is restarted; follow the new one.
+        }
+    }
+
+    /// Reads again each time the connection opens, such as after the Mac was unreachable.
+    private func watchConnection() {
+        withObservationTracking {
+            _ = host.isConnected
+        } onChange: { [weak self] in
+            Task { @MainActor in
+                guard let self else { return }
+                self.watchConnection()
+                if self.host.isConnected { await self.load() }
+            }
         }
     }
 

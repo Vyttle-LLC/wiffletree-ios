@@ -24,7 +24,7 @@ cd Packages/WiffletreeKit && swift test
 xcodebuild build -scheme Wiffletree -destination 'generic/platform=iOS Simulator'
 
 # All tests in a simulator, including the app-hosted Keychain test
-xcodebuild test -scheme Wiffletree -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+xcodebuild test -scheme Wiffletree -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 ```
 
 CI runs the package tests, checks the project is in sync with `project.yml`, and builds the app and its tests for the simulator.

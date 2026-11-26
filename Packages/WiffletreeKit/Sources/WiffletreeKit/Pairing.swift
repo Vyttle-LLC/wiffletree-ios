@@ -19,14 +19,15 @@ public enum Pairing {
     /// The longest device name a host keeps, in Unicode scalars, as the host counts them.
     public static let maxDeviceNameLength = 100
 
-    /// A device's name as both sides put it in the transcript: trimmed of Unicode white space and
-    /// cut to `maxDeviceNameLength` scalars, matching the host's Rust `trim` and `chars`.
+    /// A device's name as both sides put it in the transcript: trimmed of Unicode white space,
+    /// cut to `maxDeviceNameLength` scalars, then trimmed again where the cut ended. The host's
+    /// Rust `trim` and `chars` leave such a name as it is, so normalising twice changes nothing.
     public static func deviceName(_ name: String) -> String {
         let scalars = name.unicodeScalars
-        guard let first = scalars.firstIndex(where: { !$0.properties.isWhitespace }),
-              let last = scalars.lastIndex(where: { !$0.properties.isWhitespace })
-        else { return "" }
-        return String(String.UnicodeScalarView(scalars[first...last].prefix(maxDeviceNameLength)))
+        guard let first = scalars.firstIndex(where: { !$0.properties.isWhitespace }) else { return "" }
+        let cut = scalars[first...].prefix(maxDeviceNameLength)
+        let last = cut.lastIndex(where: { !$0.properties.isWhitespace })!
+        return String(String.UnicodeScalarView(cut[...last]))
     }
 
     /// What the confirmations cover: a label, then the host's public key as the device saw it,

@@ -25,8 +25,10 @@ SwiftUI, Swift 6 strict concurrency, iOS 26+. One XcodeGen project; the app targ
 cd Packages/WiffletreeKit && swift test
 ./scripts/generate.sh   # after adding, moving or deleting files; never bare `xcodegen generate`
 xcodebuild build -scheme Wiffletree -destination 'generic/platform=iOS Simulator'
-xcodebuild test -scheme Wiffletree -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+xcodebuild test -scheme Wiffletree -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 ```
+
+With several simulator runtimes installed, a destination by name alone matches nothing; name the `OS`, or pick a device by `id=` from `xcrun simctl list devices available`.
 
 CI (GitHub-hosted macOS) runs `swift test`, regenerates the project with XcodeGen 2.44.1 and fails on drift in `Wiffletree.xcodeproj`, then runs `xcodebuild build-for-testing`. Tests use Swift Testing (`@Test`, `#expect`).
 

@@ -64,7 +64,7 @@ public enum QRPayloadError: Error, Equatable, Sendable {
 /// The device's side of one `qr` pairing: the proof it sends and the check of the host's answer.
 public struct QRPairing: Sendable {
     public let payload: QRPayload
-    /// The name to send in `PairStart`, normalised as the transcript holds it.
+    /// The name to send in `PairStart`, normalised, as the transcript and the host hold it.
     public let deviceName: String
     public let transcript: Data
 

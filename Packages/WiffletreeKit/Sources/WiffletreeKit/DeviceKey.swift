@@ -10,7 +10,7 @@ public struct DeviceKey: Sendable {
         privateKey = P256.Signing.PrivateKey()
     }
 
-    /// From the 32-byte secret scalar `secret` returns.
+    /// Restores a key from its 32-byte scalar, as `secret` gives it.
     public init(secret: Data) throws {
         privateKey = try P256.Signing.PrivateKey(rawRepresentation: secret)
     }

@@ -64,10 +64,10 @@
   <figure class="shot">
     <div class="phones">
       <div class="phone">
-        <div class="nav"><div class="lead"><span class="back"><svg class="i"><use href="#i-back"/></svg>Tide alerts</span></div><div></div><div class="trail"></div></div>
+        <div class="nav"><div class="lead"><span class="back"><svg class="i"><use href="#i-back"/></svg>Flaky sync test</span></div><div></div><div class="trail"></div></div>
         <div class="content">
           <div style="padding:0 16px 12px">
-            <div style="font-size:24px;font-weight:700;line-height:1.2">Store alert thresholds per station</div>
+            <div style="font-size:24px;font-weight:700;line-height:1.2">Retry the sync on a lost lock</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
               <span class="chip green"><svg class="i"><use href="#i-check"/></svg>Accepted</span>
               <span class="chip plain">Vyttle-LLC/tidepool</span>
@@ -75,13 +75,14 @@
           </div>
 
           <div class="card">
-            <div style="display:flex;align-items:center;gap:8px"><svg class="i" style="color:var(--green);font-size:20px"><use href="#i-pr"/></svg><h3>#214 · Open</h3><span class="chip yellow" style="margin-left:auto">Waiting for you</span></div>
-            <div class="meta" style="margin-top:6px;font-size:14px">Checks passed · into <span class="mono">main</span> · +412 −38</div>
+            <div style="display:flex;align-items:center;gap:8px"><svg class="i" style="color:var(--green);font-size:20px"><use href="#i-pr"/></svg><h3>#212 · Open</h3><span class="chip yellow" style="margin-left:auto">Waiting for you</span></div>
+            <div class="meta" style="margin-top:6px;font-size:14px">Checks passed · into <span class="mono">feature/sync-retry</span> · +86 −12</div>
             <div class="btn-row" style="margin-top:12px">
-              <button class="btn tinted small" style="flex:1"><svg class="i"><use href="#i-external"/></svg>Open on GitHub</button>
+              <button class="btn filled small" style="flex:1">Merge in Inbox</button>
+              <button class="btn tinted small" style="flex:1"><svg class="i"><use href="#i-external"/></svg>GitHub</button>
             </div>
           </div>
-          <div class="section-foot" style="margin:-4px 0 0">main is protected, so only you can merge it, on GitHub.</div>
+          <div class="section-foot" style="margin:-4px 0 0">Published at 8:10 after you approved it.</div>
 
           <div class="section-head">Review cycles</div>
           <div class="list">
@@ -96,7 +97,7 @@
         </div>
       </div>
     </div>
-    <figcaption><b>Ticket with a pull request</b>PR number, state, checks and where it merges. The iPhone opens GitHub for a protected branch instead of merging itself; an unprotected merge comes through the Inbox.</figcaption>
+    <figcaption><b>Ticket with a pull request</b>PR number, state, checks and where it merges. This one merges into a feature branch, so its merge approval waits in the Inbox. A pull request into a protected branch such as main shows only GitHub, where you merge it yourself.</figcaption>
   </figure>
 
 </main>

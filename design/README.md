@@ -22,7 +22,7 @@ Static HTML mockups of the iPhone app, for approval before any UI is built. Open
 | 2 | [Hosts](mockups/hosts.html) | Paired hosts, swipe to remove, unreachable host, add host | Each Mac with how it is reached now (On Wi-Fi, Via Tailscale, Unreachable · last seen), a needs-you badge and the demo host. An unreachable Mac lists the addresses tried and what to check. |
 | 3 | [Home](mockups/home.html) | Projects, switch host, agents working | Projects grouped by Space, each with an attention badge, its state in words and the ticket progress bar. A "Need you" card leads to the Inbox, and a row shows the agents working. |
 | 4 | [Project](mockups/project.html) | Conversation; tickets expanded while dictating | The coordinator chat with ticket status pinned at the top, as on the desktop. It has Markdown messages, a folded agent-activity line, an "agents working" bar and a composer with dictation and send. |
-| 5 | [Inbox](mockups/inbox.html) | Needs you, answering and dismissing, answered | Questions with the coordinator's choices as buttons, plus a free-text answer. Publish and merge approvals have Deny and Approve. Answered history is grouped by day. |
+| 5 | [Inbox](mockups/inbox.html) | Needs you, answering and dismissing, answered | Questions with the coordinator's choices as buttons, plus a free-text answer. Publish and merge approvals have Deny and Approve. Only questions swipe to Dismiss. Answered history is grouped by day. |
 | 6 | [Ticket detail](mockups/ticket.html) | Ticket in review, ticket with a pull request | Status, branch, each review cycle's verdict per verifier and round, blocking findings with location and fix commit, and the pull request's number, state, checks and target. Agents are listed at the end. |
 | 7 | [Usage and Settings](mockups/usage-settings.html) | Usage, Settings, host settings and remove | Provider quota bars, showing what is left as the desktop does. App settings cover paired hosts with access level, notification kinds, appearance, the demo host and about. A host's page lets you remove it. |
 | 8 | [Notifications](mockups/notifications.html) | Lock-screen notification, Live Activity, Dynamic Island compact and expanded | "Needs you" reaching a locked phone. The text is generic because it travels through CloudKit. |
@@ -38,12 +38,13 @@ These were decided so the mockups could be finished. Each one is easy to change.
 4. **Agent-to-agent traffic folds into one activity line per burst,** which expands to show the messages. This mirrors the desktop's "2 agent messages, 1 notice" line.
 5. **Dictation is shown as our own mic button in the composer,** using on-device speech recognition with a live waveform. The alternative is the keyboard's own dictation key, which needs no microphone or speech permission. Our button is quicker to reach, but it adds two permission prompts.
 6. **Agents are read-only on iPhone.** The phone can view who is working, but stopping, restarting and changing models stay on the Mac. Should Stop at least be available?
-7. **Merging into a protected branch opens GitHub.** Only an unprotected merge is approved in the Inbox, matching "only the human merges into a protected branch".
-8. **The notification text names the project and the kind (question or approval), not the question itself.** Is the project name acceptable in an alert that passes through CloudKit, or should it be fully generic ("A coordinator needs you on Studio Mac")?
-9. **Notifications are asked for on the Paired screen,** not at first launch.
-10. **The demo marker is a teal outlined tag, not a banner on every screen.** The one-line strip on Home disappears after a Mac is paired. The demo host stays in Hosts unless hidden in Settings.
-11. **Connection names:** "On Wi-Fi", "Via Tailscale" (or "Via VPN" when the address is not a Tailscale one) and "Unreachable · last seen …".
-12. **Access level is shown, not chosen, on the phone.** The confirm screen says what the Mac granted, and changes happen on the Mac. This assumes the Mac picks Control or View only at pairing.
+7. **Merging into a protected branch opens GitHub.** Only an unprotected merge, such as one into a feature branch, is approved in the Inbox, matching "only the human merges into a protected branch".
+8. **An answer sends at once, with no Undo.** Answering wakes the asker immediately on the host, so the app does not pretend it can take an answer back. A short send delay, like Mail's Undo Send, would be possible but is not drawn. Only questions can be dismissed; the host has no Dismiss for approvals or permissions, which are approved or denied.
+9. **The notification text names the project and the kind (question or approval), not the question itself.** Is the project name acceptable in an alert that passes through CloudKit, or should it be fully generic ("A coordinator needs you on Studio Mac")?
+10. **Notifications are asked for on the Paired screen,** not at first launch.
+11. **The demo marker is a teal outlined tag, not a banner on every screen.** The one-line strip on Home disappears after a Mac is paired. The demo host stays in Hosts unless hidden in Settings.
+12. **Connection names:** "On Wi-Fi", "Via Tailscale" (or "Via VPN" when the address is not a Tailscale one) and "Unreachable · last seen …".
+13. **Access level is shown, not chosen, on the phone.** The confirm screen says what the Mac granted, and changes happen on the Mac. This assumes the Mac picks Control or View only at pairing.
 
 ## Open questions
 

@@ -74,6 +74,18 @@ struct InboxModelTests {
         #expect(model.host.snapshot?.tickets.first { $0.id == "demo-ticket-thresholds" }?.pullRequest == nil)
     }
 
+    @Test func startingTheDemoOverReopensWhatWasDecided() async throws {
+        let model = InboxModel(host: try await demoHost())
+        await model.approve(try item(publish, in: model))
+        try await eventually { model.host.openAttentionCount == 2 }
+
+        model.host.restart()
+        try await eventually { model.host.snapshot != nil && model.open.count == 3 }
+        #expect(model.open.map(\.id) == [mapTiles, publish, merge])
+        #expect(model.open.count == model.host.openAttentionCount)
+        #expect(!model.history.contains { $0.id == publish })
+    }
+
     @Test func dismissingAQuestionClearsIt() async throws {
         let model = InboxModel(host: try await demoHost())
         await model.dismiss(try item(mapTiles, in: model))

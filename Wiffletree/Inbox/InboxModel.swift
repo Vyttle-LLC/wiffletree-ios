@@ -136,8 +136,16 @@ final class InboxModel {
     }
 
     /// Moves to the history the items decided since the last snapshot, and remembers the open ones.
+    /// A restarted connection has no snapshot, and the Inbox starts over with it: the demo started
+    /// over reopens the items it decided.
     private func noteSnapshot() {
-        guard let snapshot = host.snapshot else { return }
+        guard let snapshot = host.snapshot else {
+            history = []
+            errors = [:]
+            seenOpen = [:]
+            decidedIDs = []
+            return
+        }
         for attention in snapshot.attention {
             if let answer = attention.answer {
                 // A host that keeps decided items, such as the demo, says how.

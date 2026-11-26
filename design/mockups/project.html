@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4 · Project · Wiffletree iPhone mockups</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="page-header">
+  <h1>4 · Project: coordinator chat</h1>
+  <nav class="crumbs"><a href="home.html">← Home</a><a href="index.html">All screens</a><a href="inbox.html">Next: Inbox →</a></nav>
+  <span class="spacer"></span>
+  <div class="appearance"></div>
+</header>
+<div class="intro">
+  <p>A project is its conversation with the coordinator, as on the desktop. Ticket status stays pinned at the top; the composer stays at the bottom. Messages render Markdown; agent-to-agent traffic folds into one activity line.</p>
+</div>
+<main class="gallery">
+
+  <figure class="shot">
+    <div class="phones">
+      <div class="phone">
+        <div class="nav bordered"><div class="lead"><span class="back"><svg class="i"><use href="#i-back"/></svg>Projects</span></div><div class="title">Tide alerts<small>Coordinator · working</small></div><div class="trail"><svg class="i"><use href="#i-dots"/></svg></div></div>
+        <div style="height:8px"></div>
+        <div class="pinned">
+          <div class="top">Implementing<span class="pct">69% · 1 of 3 accepted</span><svg class="i" style="color:var(--muted);font-size:15px;stroke-width:2.4"><use href="#i-down"/></svg></div>
+          <div class="progress"><span class="green" style="width:33%"></span><span style="width:26%"></span><span style="width:10%"></span></div>
+          <div class="meta">Add the tidepool alert command: verifying · round 2</div>
+        </div>
+        <div class="content">
+          <div class="chat">
+            <div>
+              <div class="msg-head"><span class="avatar"><svg class="i"><use href="#i-grid"/></svg></span>Tide alerts<span class="meta">9:12</span></div>
+              <div class="md">
+                <div class="since"><b>Since last update</b>Store alert thresholds per station: accepted · review cycle 1 passed</div>
+                <p><b>Store alert thresholds per station</b> passed its Full review, and I've accepted it.</p>
+                <ul>
+                  <li><b>Change:</b> a <code>thresholds</code> table with <code>tidepool threshold set</code>, and a migration for existing stores.</li>
+                  <li><b>Tests:</b> 14 passed; thresholds set and listed against a scratch store.</li>
+                </ul>
+                <p>Nothing has been pushed; publishing it waits for you in the Inbox.</p>
+              </div>
+            </div>
+            <div class="activity"><svg class="i"><use href="#i-chev"/></svg>2 agent messages, 1 notice · Implementer, Reviewer<span style="margin-left:auto">9:20</span></div>
+            <div class="mine">Good. Can the alert also go to the station page?</div>
+            <div>
+              <div class="msg-head"><span class="avatar"><svg class="i"><use href="#i-grid"/></svg></span>Tide alerts<span class="meta">9:31</span></div>
+              <div class="md"><p>Yes. I'll fold it into <b>Show thresholds on the station page</b> rather than open a new ticket, and tell its implementer now.</p></div>
+            </div>
+          </div>
+        </div>
+        <div class="working-bar"><svg class="i"><use href="#i-agents"/></svg>2 agents working on 2 tickets<a href="#">Agents</a></div>
+        <div class="composer">
+          <div class="field">Reply to your coordinator</div>
+          <span class="round mic"><svg class="i"><use href="#i-mic"/></svg></span>
+          <span class="round idle"><svg class="i"><use href="#i-up"/></svg></span>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Conversation</b>Coordinator messages are full-width Markdown with a small avatar, like the desktop; your messages are bubbles on the right. The activity line expands to show the agent messages. Send is dimmed until there is text.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <div class="phones">
+      <div class="phone">
+        <div class="nav bordered"><div class="lead"><span class="back"><svg class="i"><use href="#i-back"/></svg>Projects</span></div><div class="title">Tide alerts<small>Coordinator · working</small></div><div class="trail"><svg class="i"><use href="#i-dots"/></svg></div></div>
+        <div style="height:8px"></div>
+        <div class="pinned">
+          <div class="top">Implementing<span class="pct">69% · 1 of 3 accepted</span><svg class="i" style="color:var(--muted);font-size:15px;stroke-width:2.4;transform:rotate(180deg)"><use href="#i-down"/></svg></div>
+          <div class="progress"><span class="green" style="width:33%"></span><span style="width:26%"></span><span style="width:10%"></span></div>
+          <div class="tickets">
+            <div class="tk"><span class="name">Add the tidepool alert command</span><span class="chip yellow"><svg class="i"><use href="#i-spin"/></svg>Verifying · 2</span></div>
+            <div class="tk"><span class="name">Show thresholds on the station page</span><span class="chip cyan"><svg class="i"><use href="#i-spin"/></svg>Assigned</span></div>
+            <div class="tk"><span class="name">Store alert thresholds per station</span><span class="chip green"><svg class="i"><use href="#i-check"/></svg>Accepted</span></div>
+          </div>
+        </div>
+        <div class="content">
+          <div class="chat">
+            <div class="mine">Good. Can the alert also go to the station page?</div>
+            <div>
+              <div class="msg-head"><span class="avatar"><svg class="i"><use href="#i-grid"/></svg></span>Tide alerts<span class="meta">9:31</span></div>
+              <div class="md"><p>Yes. I'll fold it into <b>Show thresholds on the station page</b> rather than open a new ticket, and tell its implementer now.</p></div>
+            </div>
+          </div>
+        </div>
+        <div class="composer" style="align-items:center">
+          <div class="field" style="color:var(--text);flex-direction:column;align-items:flex-start;gap:6px;padding:10px 14px">
+            <span>Also show when the last alert fired, and keep it under the map</span>
+            <span class="wave"><span style="height:6px"></span><span style="height:14px"></span><span style="height:20px"></span><span style="height:10px"></span><span style="height:16px"></span><span style="height:8px"></span><span style="height:18px"></span><span style="height:12px"></span><span style="height:6px"></span><span style="height:14px"></span><span style="height:9px"></span><span style="height:4px"></span><span style="height:4px"></span></span>
+          </div>
+          <span class="round mic" style="background:var(--accent);color:var(--on-accent)"><svg class="i fill"><use href="#i-stop"/></svg></span>
+          <span class="round send"><svg class="i"><use href="#i-up"/></svg></span>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Tickets expanded, dictating</b>Tapping the pinned card lists every ticket with its state; tapping one opens <a href="ticket.html">Ticket detail</a>. The mic dictates on the device into the field (words appear as you speak); the stop square ends it and you can still edit before sending.</figcaption>
+  </figure>
+
+</main>
+<script src="mockup.js"></script>
+</body>
+</html>

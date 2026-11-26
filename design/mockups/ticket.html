@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6 · Ticket detail · Wiffletree iPhone mockups</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="page-header">
+  <h1>6 · Ticket detail</h1>
+  <nav class="crumbs"><a href="inbox.html">← Inbox</a><a href="index.html">All screens</a><a href="usage-settings.html">Next: Usage and Settings →</a></nav>
+  <span class="spacer"></span>
+  <div class="appearance"></div>
+</header>
+<div class="intro">
+  <p>Pushed from a ticket in the project's pinned status. One screen per ticket: where it stands, its review cycles and findings, its pull request and the agents on it.</p>
+</div>
+<main class="gallery">
+
+  <figure class="shot">
+    <div class="phones">
+      <div class="phone">
+        <div class="nav"><div class="lead"><span class="back"><svg class="i"><use href="#i-back"/></svg>Tide alerts</span></div><div></div><div class="trail"></div></div>
+        <div class="content">
+          <div style="padding:0 16px 12px">
+            <div style="font-size:24px;font-weight:700;line-height:1.2">Add the tidepool alert command</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+              <span class="chip yellow"><svg class="i"><use href="#i-spin"/></svg>Verifying · round 2</span>
+              <span class="chip plain">Vyttle-LLC/tidepool</span>
+            </div>
+          </div>
+          <div class="list">
+            <div class="row"><div class="main">Branch</div><span class="value mono" style="font-size:13px">wiffletree/add-tidepool-alert</span></div>
+            <div class="row"><div class="main">Pull request</div><span class="value">Not published</span></div>
+          </div>
+
+          <div class="section-head">Review cycle 1 · round 2</div>
+          <div class="list">
+            <div class="row"><div class="main">Tests</div><span class="state green"><svg class="i"><use href="#i-check"/></svg>Passed</span></div>
+            <div class="row"><div class="main">Correctness<span class="sub">Checking the fix for 1 finding</span></div><span class="state cyan"><svg class="i"><use href="#i-spin"/></svg>Running</span></div>
+            <div class="row"><div class="main">Regressions</div><span class="state green"><svg class="i"><use href="#i-check"/></svg>Passed</span></div>
+          </div>
+          <div class="section-head">Round 1</div>
+          <div class="list">
+            <div class="row">
+              <div class="main">Alert fires twice when a station has two thresholds<span class="sub mono" style="font-size:12px">src/alert.rs:88 · blocking · fixed in 3f1c2e0</span></div>
+              <span class="state red"><svg class="i"><use href="#i-warn"/></svg>Failed</span>
+            </div>
+          </div>
+
+          <div class="section-head">Agents</div>
+          <div class="list">
+            <div class="row"><div class="main">Implementer<span class="sub">Claude Opus · idle since ready for testing</span></div><span class="state subtle"><span class="ring"></span>Idle</span></div>
+            <div class="row"><div class="main">Reviewer · Correctness<span class="sub">Codex</span></div><span class="state cyan"><svg class="i"><use href="#i-spin"/></svg>Working</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Ticket in review</b>Status chip in words. Each verifier's verdict per round; a failed round lists its blocking findings with location, and the commit that fixed it. Only failed verifiers re-run, so passed rows stay passed.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <div class="phones">
+      <div class="phone">
+        <div class="nav"><div class="lead"><span class="back"><svg class="i"><use href="#i-back"/></svg>Flaky sync test</span></div><div></div><div class="trail"></div></div>
+        <div class="content">
+          <div style="padding:0 16px 12px">
+            <div style="font-size:24px;font-weight:700;line-height:1.2">Retry the sync on a lost lock</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+              <span class="chip green"><svg class="i"><use href="#i-check"/></svg>Accepted</span>
+              <span class="chip plain">Vyttle-LLC/tidepool</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:8px"><svg class="i" style="color:var(--green);font-size:20px"><use href="#i-pr"/></svg><h3>#212 · Open</h3><span class="chip yellow" style="margin-left:auto">Waiting for you</span></div>
+            <div class="meta" style="margin-top:6px;font-size:14px">Checks passed · into <span class="mono">feature/sync-retry</span> · +86 −12</div>
+            <div class="btn-row" style="margin-top:12px">
+              <button class="btn filled small" style="flex:1">Merge in Inbox</button>
+              <button class="btn tinted small" style="flex:1"><svg class="i"><use href="#i-external"/></svg>GitHub</button>
+            </div>
+          </div>
+          <div class="section-foot" style="margin:-4px 0 0">Published at 8:10 after you approved it.</div>
+
+          <div class="section-head">Review cycles</div>
+          <div class="list">
+            <div class="row"><div class="main">Cycle 1 · Full<span class="sub">Tests, Correctness, Regressions · 1 round</span></div><span class="state green"><svg class="i"><use href="#i-check"/></svg>Passed</span></div>
+          </div>
+
+          <div class="section-head">Agents</div>
+          <div class="list">
+            <div class="row"><div class="main">Implementer<span class="sub">Claude Opus</span></div><span class="state subtle">Archived</span></div>
+            <div class="row"><div class="main">Tester<span class="sub">Codex</span></div><span class="state subtle">Archived</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Ticket with a pull request</b>PR number, state, checks and where it merges. This one merges into a feature branch, so its merge approval waits in the Inbox. A pull request into a protected branch such as main shows only GitHub, where you merge it yourself.</figcaption>
+  </figure>
+
+</main>
+<script src="mockup.js"></script>
+</body>
+</html>

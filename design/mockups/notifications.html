@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>8 · Notifications and Live Activity · Wiffletree iPhone mockups</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="page-header">
+  <h1>8 · Notifications and Live Activity</h1>
+  <nav class="crumbs"><a href="usage-settings.html">← Usage and Settings</a><a href="index.html">All screens</a><a href="demo.html">Next: Demo mode →</a></nav>
+  <span class="spacer"></span>
+  <div class="appearance"></div>
+</header>
+<div class="intro">
+  <p>How “a coordinator needs you” reaches a locked phone. The host writes a small record to your private CloudKit database and iOS shows the alert, so its text is generic: the project, not the question. Tapping it opens the Inbox, which loads the details over your network.</p>
+</div>
+<main class="gallery">
+
+  <figure class="shot">
+    <div class="phones">
+      <div class="phone lock" data-status="icons">
+        <div class="clock"><div class="date">Wednesday 25 November</div><div class="time">9:41</div></div>
+        <div class="notif-stack">
+          <div class="notif">
+            <span class="app-icon"><svg><use href="#i-symbol"/></svg></span>
+            <div class="body"><b>Station map needs you<span class="meta">now</span></b>A coordinator has a question for you on Studio Mac.</div>
+          </div>
+          <div class="notif">
+            <span class="app-icon"><svg><use href="#i-symbol"/></svg></span>
+            <div class="body"><b>Tide alerts needs you<span class="meta">25 min ago</span></b>A ticket is ready to publish, with your approval.</div>
+          </div>
+        </div>
+        <div class="lock-buttons"><span><svg class="i"><use href="#i-flash"/></svg></span><span><svg class="i"><use href="#i-camera"/></svg></span></div>
+      </div>
+    </div>
+    <figcaption><b>Lock-screen notification</b>One alert per item that needs you, grouped by iOS under Wiffletree. Title names the project; the body says the kind (question or approval) and the host. Notification cards follow Light and Dark.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <div class="phones">
+      <div class="phone lock" data-status="icons">
+        <div class="clock"><div class="date">Wednesday 25 November</div><div class="time">9:41</div></div>
+        <div class="notif-stack">
+          <div class="live">
+            <div class="live-top"><span class="app-icon" style="width:26px;height:26px;border-radius:7px"><svg style="width:18px;height:9px"><use href="#i-symbol"/></svg></span>Studio Mac<span class="meta">updated 9:40</span></div>
+            <div class="big">3 need you</div>
+            <div class="meta" style="font-size:14px">Station map asked a question · 2 approvals waiting</div>
+            <div class="progress"><span class="green" style="width:33%"></span><span style="width:36%"></span></div>
+            <div class="meta" style="margin-top:4px">Tide alerts · implementing · 1 of 3 accepted</div>
+          </div>
+        </div>
+        <div class="lock-buttons"><span><svg class="i"><use href="#i-flash"/></svg></span><span><svg class="i"><use href="#i-camera"/></svg></span></div>
+      </div>
+    </div>
+    <figcaption><b>Live Activity</b>While something needs you, one activity per host: the count, what kind, and the busiest project's progress. It ends when the Inbox is empty. How it updates without our own push server is an open question in the README.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <div class="phones">
+      <div class="phone">
+        <div class="island compact">
+          <span class="app-icon"><svg><use href="#i-symbol"/></svg></span>
+          <span class="badge">3</span>
+        </div>
+        <div class="springboard"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+    <figcaption><b>Dynamic Island, compact</b>In another app: the Wiffletree symbol on the left, the needs-you count on the right, in the attention colour.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <div class="phones">
+      <div class="phone">
+        <div class="island expanded">
+          <div style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600">
+            <span class="app-icon"><svg><use href="#i-symbol"/></svg></span>Studio Mac<span style="margin-left:auto;font-weight:400;color:var(--stone)">3 need you</span>
+          </div>
+          <div style="font-size:17px;font-weight:600;margin-top:14px">Station map asked a question</div>
+          <div style="font-size:14px;color:var(--stone);margin-top:2px">and 2 approvals wait for you</div>
+          <div style="display:flex;justify-content:flex-end;margin-top:10px">
+            <span class="chip" style="background:var(--tide);color:var(--paper);padding:5px 12px;font-size:14px">Open Inbox</span>
+          </div>
+        </div>
+        <div class="springboard" style="padding-top:190px"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+    <figcaption><b>Dynamic Island, expanded</b>Long-press shows the same summary as the lock screen and one button, Open Inbox. The island is always black glass, so it uses the brand stone and tide on deep teal in both appearances.</figcaption>
+  </figure>
+
+</main>
+<script src="mockup.js"></script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+name: CI
+
+# PR-only: merges to main are squash-merges of already-green PRs.
+on:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# The repository is public, so GitHub-hosted macOS runners cost nothing.
+jobs:
+  package:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: xcodebuild -version
+      - name: WiffletreeKit tests
+        working-directory: Packages/WiffletreeKit
+        run: swift test
+
+  app:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: xcodebuild -version
+      - name: Install XcodeGen (pinned)
+        # Pin to the version that generated the committed project: pbxproj
+        # output differs across versions and would fail the sync check.
+        run: |
+          curl -fsSL -o /tmp/xcodegen.zip https://github.com/yonaskolb/XcodeGen/releases/download/2.44.1/xcodegen.zip
+          unzip -q /tmp/xcodegen.zip -d /tmp/xcg
+          echo "/tmp/xcg/xcodegen/bin" >> "$GITHUB_PATH"
+      - name: Regenerate project and verify it is committed in sync
+        run: |
+          xcodegen --version
+          ./scripts/generate.sh
+          git diff --exit-code Wiffletree.xcodeproj
+      - name: Build app and tests for the simulator
+        # build-for-testing also compiles the app-hosted tests, which need a
+        # booted simulator to run; run those locally with `xcodebuild test`.
+        run: |
+          xcodebuild build-for-testing -quiet -scheme Wiffletree \
+            -destination 'generic/platform=iOS Simulator'

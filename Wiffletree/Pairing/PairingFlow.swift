@@ -24,12 +24,26 @@ final class PairingFlow {
     private(set) var error: String?
 
     @ObservationIgnored private let app: AppModel
+    @ObservationIgnored private let replacing: KeyID?
+    @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private var browser: NWBrowser?
+    /// A code the person cancelled, ignored for a moment so the camera, still on it, doesn't
+    /// reopen the sheet at once.
+    @ObservationIgnored private var declined: (payload: QRPayload, until: Date)?
 
-    enum Start { case firstRun, addHost }
+    /// How long a cancelled code is ignored.
+    static let declinePause: TimeInterval = 3
 
-    init(app: AppModel, start: Start) {
+    enum Start: Equatable {
+        case firstRun, addHost
+        /// Pairing a host whose key changed; the new pairing replaces it.
+        case pairAgain(KeyID)
+    }
+
+    init(app: AppModel, start: Start, now: @escaping () -> Date = Date.init) {
         self.app = app
+        self.now = now
+        if case .pairAgain(let id) = start { replacing = id } else { replacing = nil }
         step = .instructions
         if start == .firstRun { step = nextAfterInstructions }
     }
@@ -54,7 +68,9 @@ final class PairingFlow {
     func scanned(_ text: String) {
         guard found == nil, !isPairing else { return }
         do {
-            found = try QRPayload(scanned: text)
+            let payload = try QRPayload(scanned: text)
+            if let declined, declined.payload == payload, now() < declined.until { return }
+            found = payload
             error = nil
         } catch {
             self.error = "That isn't a Wiffletree pairing code. On your Mac, choose Connect a phone."
@@ -66,7 +82,7 @@ final class PairingFlow {
         isPairing = true
         defer { isPairing = false }
         do {
-            let host = try await app.pair(payload)
+            let host = try await app.pair(payload, replacing: replacing)
             found = nil
             error = nil
             step = .paired(host)
@@ -78,6 +94,8 @@ final class PairingFlow {
 
     /// Cancel on the confirm sheet: back to the camera for a fresh code.
     func cancelConfirm() {
+        guard let payload = found else { return }
+        declined = (payload, now().addingTimeInterval(Self.declinePause))
         found = nil
         error = nil
     }

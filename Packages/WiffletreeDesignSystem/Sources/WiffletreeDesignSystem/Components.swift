@@ -165,12 +165,25 @@ extension View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Tidal.surface, in: .rect(cornerRadius: 14))
     }
+}
 
-    /// An inset grouped list on the Tidal base, its rows on the surface.
-    public func tidalList() -> some View {
-        listStyle(.insetGrouped)
-            .scrollContentBackground(.hidden)
-            .background(Tidal.base)
+/// An inset grouped list on the Tidal base, its rows on the surface. A row background must be
+/// set on the rows, which a modifier on `List` doesn't reach, so the list wraps its content.
+public struct TidalList<Content: View>: View {
+    private let content: Content
+
+    public init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    public var body: some View {
+        List {
+            Group { content }
+                .listRowBackground(Tidal.surface)
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Tidal.base)
     }
 }
 

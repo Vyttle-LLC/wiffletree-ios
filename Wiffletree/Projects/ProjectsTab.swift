@@ -15,10 +15,14 @@ struct ProjectsTab: View {
                     if host.isDemo && !app.hasPairedHost {
                         DemoStrip()
                     }
-                    if host.status.kind == .unreachable {
+                    switch host.status.kind {
+                    case .keyChanged:
+                        KeyChangedCard(host: host)
+                            .padding(.horizontal, 16)
+                    case .unreachable:
                         UnreachableCard(host: host)
                             .padding(.horizontal, 16)
-                    } else {
+                    default:
                         ContentUnavailableView(
                             "Projects",
                             systemImage: "square.grid.2x2",

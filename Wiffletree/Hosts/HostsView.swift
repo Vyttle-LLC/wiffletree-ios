@@ -10,7 +10,7 @@ struct HostsView: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            TidalList {
                 if app.hasPairedHost {
                     Section {
                         ForEach(app.hosts) { host in
@@ -32,7 +32,6 @@ struct HostsView: View {
                     AddHostRow { isAddingHost = true }
                 }
             }
-            .tidalList()
             .navigationTitle("Hosts")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -53,7 +52,6 @@ struct HostsView: View {
         } label: {
             HostRow(host: host, isCurrent: host.id == app.selectedID)
         }
-        .listRowBackground(Tidal.surface)
     }
 }
 
@@ -69,6 +67,5 @@ struct AddHostRow: View {
                 Text(title).foregroundStyle(Tidal.accent)
             }
         }
-        .listRowBackground(Tidal.surface)
     }
 }

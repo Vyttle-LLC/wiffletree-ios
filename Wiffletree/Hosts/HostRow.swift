@@ -42,7 +42,7 @@ struct HostRow: View {
         case (.status, false):
             StatusLabel(status.text, systemImage: status.systemImage, tone: status.tone)
         case (.access, false):
-            Text("\(host.level.title) · \(status.title.lowercased())")
+            Text("\(host.level.title) · \(status.title)")
                 .font(.subheadline)
                 .foregroundStyle(Tidal.subtle)
         }

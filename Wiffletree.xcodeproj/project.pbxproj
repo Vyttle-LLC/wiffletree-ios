@@ -37,6 +37,7 @@
 		DA124F4FBBA588C43DC71361 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45B638EF695D0AE4582EB21F /* RootView.swift */; };
 		E21B63F5EA0AFA93D475270F /* ConfirmPairingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74715DA3455A6C83B8D9739D /* ConfirmPairingSheet.swift */; };
 		EA687C9E64565F08B6840542 /* WiffletreeDesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = 1CB5AF83C258C75752385D67 /* WiffletreeDesignSystem */; };
+		EF812C50EB0361111A906F62 /* KeyChangedCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4887661BCB87CDF1329B712F /* KeyChangedCard.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +58,7 @@
 		40B9918EC42AEC64DA48E64E /* LiveDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveDependencies.swift; sourceTree = "<group>"; };
 		42418774F60D581CEE638F7B /* Wiffletree.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Wiffletree.entitlements; sourceTree = "<group>"; };
 		45B638EF695D0AE4582EB21F /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		4887661BCB87CDF1329B712F /* KeyChangedCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyChangedCard.swift; sourceTree = "<group>"; };
 		4963B9B41758F113BCD332F9 /* WiffletreeDesignSystem */ = {isa = PBXFileReference; lastKnownFileType = folder; name = WiffletreeDesignSystem; path = Packages/WiffletreeDesignSystem; sourceTree = SOURCE_ROOT; };
 		4F6C765B9CE3D12F3B7DF516 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		4FEC773F74277BC493C98F1B /* WiffletreeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WiffletreeApp.swift; sourceTree = "<group>"; };
@@ -139,6 +141,7 @@
 				C75E78D6AB26B3B3DA839B7E /* HostDetailView.swift */,
 				A17E17D499F5C03C9EAF322A /* HostRow.swift */,
 				9BC780B5BF15563D3FAA14DC /* HostsView.swift */,
+				4887661BCB87CDF1329B712F /* KeyChangedCard.swift */,
 			);
 			path = Hosts;
 			sourceTree = "<group>";
@@ -358,6 +361,7 @@
 				31A55F3056A7360EF5B7BB70 /* HostStatus.swift in Sources */,
 				1198E526A70C591CF09B89C9 /* HostsView.swift in Sources */,
 				8A002A24D344575CFA4B3DAE /* InboxTab.swift in Sources */,
+				EF812C50EB0361111A906F62 /* KeyChangedCard.swift in Sources */,
 				82115B73687CA4B68690B9C0 /* LiveDependencies.swift in Sources */,
 				200222B34DA94F995EF15434 /* LiveHost.swift in Sources */,
 				B1A316518D959E82FEEC6EC1 /* PairingFlow.swift in Sources */,

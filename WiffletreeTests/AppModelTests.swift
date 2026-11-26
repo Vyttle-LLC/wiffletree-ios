@@ -141,6 +141,18 @@ struct AppModelTests {
         #expect(app.notice?.hostName == "Studio Mac")
     }
 
+    @Test func aChangedKeyKeepsTheHostUntilThePersonDecides() async throws {
+        let harness = Harness([studio])
+        let host = try #require(harness.app.selected)
+        try harness.connection(studio).yield(.failed(.keyChanged))
+        try await eventually { host.status.kind == .keyChanged }
+
+        #expect(harness.app.hosts.map(\.id) == [.paired(studio.id)])
+        #expect(harness.store.hosts().map(\.id) == [studio.id])
+        #expect(harness.app.selectedID == .paired(studio.id))
+        #expect(harness.app.notice == nil)
+    }
+
     @Test func otherFailuresKeepTheHost() async throws {
         let harness = Harness([studio])
         let host = try #require(harness.app.selected)
@@ -246,6 +258,38 @@ struct PairingFlowTests {
         #expect(flow.step == .paired(studio))
         #expect(flow.found == nil)
         #expect(harness.app.hosts.map(\.name) == ["Studio Mac"])
+    }
+
+    @Test func pairingAgainAHostWhoseKeyChangedReplacesIt() async throws {
+        let harness = Harness([studio])
+        let reinstalled = PairedHost.fake("Studio Mac")
+        harness.paired = reinstalled
+        let flow = PairingFlow(app: harness.app, start: .pairAgain(studio.id))
+        #expect(flow.step == .instructions)
+        flow.scanned(qrCode(for: reinstalled))
+
+        await flow.confirm()
+
+        #expect(harness.app.hosts.map(\.id) == [.paired(reinstalled.id)])
+        #expect(harness.store.hosts().map(\.id) == [reinstalled.id])
+    }
+
+    @Test func aCancelledCodeIsIgnoredForAMomentWhileOthersOpenAtOnce() {
+        var now = Date()
+        let flow = PairingFlow(app: Harness().app, start: .firstRun, now: { now })
+        flow.scanned(qrCode(for: studio))
+        flow.cancelConfirm()
+
+        flow.scanned(qrCode(for: studio))
+        #expect(flow.found == nil, "The camera is still on the code just cancelled")
+
+        flow.scanned(qrCode(for: office))
+        #expect(flow.found?.hostName == "Office mini")
+        flow.cancelConfirm()
+
+        now += PairingFlow.declinePause + 1
+        flow.scanned(qrCode(for: office))
+        #expect(flow.found?.hostName == "Office mini")
     }
 
     @Test func aFailedPairingStaysOnTheConfirmSheetWithTheReason() async {

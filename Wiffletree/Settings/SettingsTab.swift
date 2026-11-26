@@ -10,7 +10,7 @@ struct SettingsTab: View {
     var body: some View {
         @Bindable var app = app
         NavigationStack {
-            List {
+            TidalList {
                 Section("Hosts") {
                     ForEach(app.listedHosts) { host in
                         NavigationLink {
@@ -18,14 +18,12 @@ struct SettingsTab: View {
                         } label: {
                             HostRow(host: host, isCurrent: false, detail: .access)
                         }
-                        .listRowBackground(Tidal.surface)
                     }
                     AddHostRow(title: app.hasPairedHost ? "Add a Mac" : "Pair your Mac") { isAddingHost = true }
                 }
 
                 Section {
                     LabeledContent("Notifications", value: "Coming soon")
-                        .listRowBackground(Tidal.surface)
                 } header: {
                     Text("Notifications")
                 } footer: {
@@ -35,11 +33,9 @@ struct SettingsTab: View {
                 Section {
                     if current.isDemo {
                         Button("Start the demo over") { app.restartDemo() }
-                            .listRowBackground(Tidal.surface)
                     }
                     Toggle("Show the demo host", isOn: $app.showsDemoHost)
                         .tint(Tidal.green)
-                        .listRowBackground(Tidal.surface)
                 } header: {
                     Text("Demo")
                 } footer: {
@@ -48,14 +44,10 @@ struct SettingsTab: View {
 
                 Section("About") {
                     LabeledContent("Version", value: Self.version)
-                        .listRowBackground(Tidal.surface)
                     LabeledContent("Privacy", value: "Data not collected")
-                        .listRowBackground(Tidal.surface)
                     Link("Source code", destination: URL(string: "https://github.com/Vyttle-LLC/wiffletree-ios")!)
-                        .listRowBackground(Tidal.surface)
                 }
             }
-            .tidalList()
             .navigationTitle("Settings")
         }
         .pairingFlow(isPresented: $isAddingHost, start: .addHost)

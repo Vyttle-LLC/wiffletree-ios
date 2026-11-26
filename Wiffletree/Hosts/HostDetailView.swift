@@ -10,8 +10,14 @@ struct HostDetailView: View {
     @State private var removing: LiveHost?
 
     var body: some View {
-        List {
-            if host.status.kind == .unreachable {
+        TidalList {
+            if host.status.kind == .keyChanged {
+                Section {
+                    KeyChangedCard(host: host) { dismiss() }
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                }
+            } else if host.status.kind == .unreachable {
                 Section {
                     UnreachableCard(host: host)
                         .listRowInsets(EdgeInsets())
@@ -23,7 +29,6 @@ struct HostDetailView: View {
                     LabeledContent("Now") {
                         StatusLabel(host.status.text, systemImage: host.status.systemImage, tone: host.status.tone)
                     }
-                    .listRowBackground(Tidal.surface)
                 }
                 addresses(header: "Addresses", footer: nil)
             }
@@ -31,7 +36,6 @@ struct HostDetailView: View {
             if host.isDemo {
                 Section {
                     Button("Start the demo over") { app.restartDemo() }
-                        .listRowBackground(Tidal.surface)
                 } header: {
                     Text("Demo")
                 } footer: {
@@ -43,26 +47,23 @@ struct HostDetailView: View {
                         Text(host.level.title)
                         Text(host.level.explanation).font(.subheadline).foregroundStyle(Tidal.subtle)
                     }
-                    .listRowBackground(Tidal.surface)
                 }
             }
 
             if host.id != app.selectedID {
                 Section {
                     Button("Open \(host.name)") { app.select(host.id) }
-                        .listRowBackground(Tidal.surface)
                 }
             }
 
-            if !host.isDemo {
+            // A changed key's card already offers Remove beside Pair again.
+            if !host.isDemo && host.status.kind != .keyChanged {
                 Section {
                     Button("Remove \(host.name)", role: .destructive) { removing = host }
                         .frame(maxWidth: .infinity)
-                        .listRowBackground(Tidal.surface)
                 }
             }
         }
-        .tidalList()
         .navigationTitle(host.name)
         .navigationBarTitleDisplayMode(.inline)
         .confirmingRemoval(of: $removing) { dismiss() }
@@ -75,7 +76,6 @@ struct HostDetailView: View {
                     Text(address.host)
                     Text(address.network.title).font(.subheadline).foregroundStyle(Tidal.subtle)
                 }
-                .listRowBackground(Tidal.surface)
             }
         } header: {
             Text(header)

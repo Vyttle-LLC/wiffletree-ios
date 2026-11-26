@@ -7,6 +7,8 @@ import WiffletreeKit
 struct HostStatus: Equatable {
     enum Kind: Equatable {
         case demo, connecting, connected, unreachable, needsUpdate
+        /// The host answered with another key: nothing connects until it is paired again.
+        case keyChanged
     }
 
     let kind: Kind
@@ -34,6 +36,8 @@ struct HostStatus: Equatable {
             self.init(.connected, network.route, systemImage: network.systemImage, tone: network == .local ? .green : .cyan)
         case .connecting where lastFailure == nil:
             self.init(.connecting, "Connecting…", systemImage: "ellipsis", tone: .subtle)
+        case .failed(.keyChanged):
+            self.init(.keyChanged, "Key changed", systemImage: "exclamationmark.shield", tone: .red)
         case .failed(.incompatible):
             self.init(.needsUpdate, "Needs an update", systemImage: "exclamationmark.triangle", tone: .yellow)
         case .connecting, .waiting, .failed, .closed:

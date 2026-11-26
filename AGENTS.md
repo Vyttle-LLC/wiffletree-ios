@@ -15,6 +15,7 @@ SwiftUI, Swift 6 strict concurrency, iOS 26+. One XcodeGen project; the app targ
   - `Pairing` — device-name normalisation, the transcript, HMAC confirmations (checked in constant time) and the `/v1` challenge message.
   - `QRPayload`, `QRPairing` — parsing the pairing QR code and the device's side of the `qr` method. The iPhone does not implement the `code` (SPAKE2) method.
   - `KeyStore` — `KeychainKeyStore` for the app, `InMemoryKeyStore` for tests.
+  - `Connection/` — the network client. `NetworkDialer` opens TLS 1.3 pinned to the host's key and a WebSocket (Network.framework); `AddressRace` tries a host's addresses at once with the key-change rules; `HostPairer` pairs by `qr` on `/pair` and keeps the host in a `PairedHostStore`; `RemoteHostConnection` answers the `/v1` challenge, says `Hello`, sends typed `HostCommand`s, streams events and reconnects with the last cursor. `HostConnection` is the protocol a demo host can implement too. `HostModels` and `HostCommands` hold only what the first screens need; unknown fields, states and event kinds are tolerated.
 - **`Wiffletree/`** — the app. `Info.plist` and the entitlements are generated from `project.yml`; edit them there.
 - **`WiffletreeTests/`** — tests that need the app as host (the Keychain needs a signed app's entitlements).
 - **`design/`** — HTML mockups; not part of the build.
@@ -25,8 +26,12 @@ SwiftUI, Swift 6 strict concurrency, iOS 26+. One XcodeGen project; the app targ
 cd Packages/WiffletreeKit && swift test
 ./scripts/generate.sh   # after adding, moving or deleting files; never bare `xcodegen generate`
 xcodebuild build -scheme Wiffletree -destination 'generic/platform=iOS Simulator'
-xcodebuild test -scheme Wiffletree -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+xcodebuild test -scheme Wiffletree -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5'
 ```
+
+With several simulator runtimes installed, a destination by name alone matches nothing; name the `OS`, or pick a device by `id=` from `xcrun simctl list devices available`.
+
+The package tests reach no network: `Tests/WiffletreeKitTests/Support/` has an in-process fake host. `scripts/e2e/host-e2e.sh [wiffletree checkout]` is the local end-to-end check against a real headless host (pair by QR code, list projects); it needs a host branch that offers pairing by `qr`, and port 47821 free.
 
 CI (GitHub-hosted macOS) runs `swift test`, regenerates the project with XcodeGen 2.44.1 and fails on drift in `Wiffletree.xcodeproj`, then runs `xcodebuild build-for-testing`. Tests use Swift Testing (`@Test`, `#expect`).
 

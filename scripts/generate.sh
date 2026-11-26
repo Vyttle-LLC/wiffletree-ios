@@ -6,13 +6,13 @@
 # Gotcha it guards: on Nix-symlinked installs, invoking xcodegen via the PATH
 # symlink makes it miss its bundled SettingPresets and silently strip build
 # settings from the generated project. Resolving the real binary path avoids
-# that. On CI (Homebrew xcodegen) the resolve is a no-op.
+# that. On CI (the pinned 2.44.1 release zip) the resolve is a no-op.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 if ! command -v xcodegen >/dev/null 2>&1; then
-    echo "error: xcodegen not found on PATH. Install it (brew install xcodegen)." >&2
+    echo "error: xcodegen not found on PATH. Install XcodeGen 2.44.1 (see README.md)." >&2
     exit 1
 fi
 

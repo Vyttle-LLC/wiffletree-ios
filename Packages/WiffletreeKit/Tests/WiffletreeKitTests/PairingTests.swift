@@ -16,6 +16,13 @@ struct DeviceNameTests {
         #expect(name.count == 50)
     }
 
+    /// White space where the cut falls would be trimmed by the host's second normalisation.
+    @Test func trimsAgainWhereTheCutEnds() {
+        let name = Pairing.deviceName(String(repeating: "a", count: 99) + " x")
+        #expect(name == String(repeating: "a", count: 99))
+        #expect(Pairing.deviceName(name) == name)
+    }
+
     @Test func transcriptHoldsTheNormalisedName() {
         let key = Data([4])
         #expect(

@@ -23,6 +23,18 @@ struct HostAddressTests {
         #expect(!HostAddress(host: "192.168.1.20").namesOneMachine)
         #expect(!HostAddress(host: "fe80::1").namesOneMachine)
     }
+
+    @Test func tellsTheLocalNetworkFromTailscaleAndOtherVPNs() {
+        for local in ["192.168.1.20", "10.0.0.4", "172.20.1.1", "169.254.3.3", "studio.local", "fe80::1", "fd12::4"] {
+            #expect(HostAddress(host: local).network == .local, "\(local)")
+        }
+        for tailscale in ["100.101.102.103", "fd7a:115c:a1e0::5", "studio.tail4c2e.ts.net"] {
+            #expect(HostAddress(host: tailscale).network == .tailscale, "\(tailscale)")
+        }
+        for other in ["172.32.0.1", "100.128.0.1", "studio.example.com", "2001:db8::1"] {
+            #expect(HostAddress(host: other).network == .otherVPN, "\(other)")
+        }
+    }
 }
 
 struct CertificatePinTests {

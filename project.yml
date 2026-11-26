@@ -15,6 +15,8 @@ packages:
   # Local layered packages. The app target is a thin composition root.
   WiffletreeKit:
     path: Packages/WiffletreeKit
+  WiffletreeDesignSystem:
+    path: Packages/WiffletreeDesignSystem
 targets:
   Wiffletree:
     type: application
@@ -29,6 +31,7 @@ targets:
         CODE_SIGN_ENTITLEMENTS: Wiffletree/Wiffletree.entitlements
     dependencies:
       - package: WiffletreeKit
+      - package: WiffletreeDesignSystem
     info:
       path: Wiffletree/Info.plist
       properties:

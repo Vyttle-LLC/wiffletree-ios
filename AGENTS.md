@@ -16,6 +16,7 @@ SwiftUI, Swift 6 strict concurrency, iOS 26+. One XcodeGen project; the app targ
   - `QRPayload`, `QRPairing` — parsing the pairing QR code and the device's side of the `qr` method. The iPhone does not implement the `code` (SPAKE2) method.
   - `KeyStore` — `KeychainKeyStore` for the app, `InMemoryKeyStore` for tests.
   - `Connection/` — the network client. `NetworkDialer` opens TLS 1.3 pinned to the host's key and a WebSocket (Network.framework); `AddressRace` tries a host's addresses at once with the key-change rules; `HostPairer` pairs by `qr` on `/pair` and keeps the host in a `PairedHostStore`; `RemoteHostConnection` answers the `/v1` challenge, says `Hello`, sends typed `HostCommand`s, streams events and reconnects with the last cursor. `HostConnection` is the protocol a demo host can implement too. `HostModels` and `HostCommands` hold only what the first screens need; unknown fields, states and event kinds are tolerated.
+  - `Demo/` — `DemoHostConnection`, the built-in "Demo Mac" (App Review's demo mode): `DemoSeed`'s workspace in memory, no network, canned replies after an injectable delay, events with the real cursor rules. Commands it cannot simulate fail with "Not available in the demo." Keep the seed telling the story of `design/mockups/`.
 - **`Wiffletree/`** — the app. `Info.plist` and the entitlements are generated from `project.yml`; edit them there.
 - **`WiffletreeTests/`** — tests that need the app as host (the Keychain needs a signed app's entitlements).
 - **`design/`** — HTML mockups; not part of the build.

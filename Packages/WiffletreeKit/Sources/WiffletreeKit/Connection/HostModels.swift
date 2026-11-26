@@ -77,7 +77,7 @@ public struct Session: Decodable, Identifiable, Sendable {
     public let name: String
     public let role: Role
     public let provider: String
-    public let status: Status
+    public internal(set) var status: Status
 
     private enum CodingKeys: String, CodingKey {
         case id, projectID = "projectId", parentID = "parentId", name, role, provider, status
@@ -114,10 +114,20 @@ public struct Attention: Decodable, Identifiable, Sendable {
     public let prompt: String
     /// Suggested answers; free text is always allowed.
     public let options: [String]
-    public let answer: String?
+    public internal(set) var answer: String?
 
     private enum CodingKeys: String, CodingKey {
         case id, projectID = "projectId", sessionID = "sessionId", operationID = "operationId", prompt, options, answer
+    }
+
+    init(id: String, projectID: String, sessionID: String, operationID: String, prompt: String, options: [String] = [], answer: String? = nil) {
+        self.id = id
+        self.projectID = projectID
+        self.sessionID = sessionID
+        self.operationID = operationID
+        self.prompt = prompt
+        self.options = options
+        self.answer = answer
     }
 
     public init(from decoder: any Decoder) throws {
@@ -154,12 +164,142 @@ public struct Ticket: Decodable, Identifiable, Sendable {
     public let title: String
     public let brief: String
     public let branch: String
-    public let state: State
-    public let pullRequest: PullRequest?
+    public internal(set) var state: State
+    /// The latest review cycle.
+    public let verification: Verification?
+    /// Earlier review cycles, oldest first.
+    public let previousCycles: [Verification]
+    /// Every finding verifiers recorded, across all cycles.
+    public let ledger: [LedgerEntry]
+    public internal(set) var pullRequest: PullRequest?
 
     private enum CodingKeys: String, CodingKey {
-        case id, coordinatorID = "coordinatorId", title, brief, branch, state, pullRequest
+        case id, coordinatorID = "coordinatorId", title, brief, branch, state, verification, previousCycles, ledger, pullRequest
     }
+
+    init(
+        id: String, coordinatorID: String, title: String, brief: String, branch: String, state: State,
+        verification: Verification? = nil, previousCycles: [Verification] = [], ledger: [LedgerEntry] = [],
+        pullRequest: PullRequest? = nil
+    ) {
+        self.id = id
+        self.coordinatorID = coordinatorID
+        self.title = title
+        self.brief = brief
+        self.branch = branch
+        self.state = state
+        self.verification = verification
+        self.previousCycles = previousCycles
+        self.ledger = ledger
+        self.pullRequest = pullRequest
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        coordinatorID = try container.decode(String.self, forKey: .coordinatorID)
+        title = try container.decode(String.self, forKey: .title)
+        brief = try container.decode(String.self, forKey: .brief)
+        branch = try container.decode(String.self, forKey: .branch)
+        state = try container.decode(State.self, forKey: .state)
+        verification = try container.decodeIfPresent(Verification.self, forKey: .verification)
+        previousCycles = try container.decodeIfPresent([Verification].self, forKey: .previousCycles) ?? []
+        ledger = try container.decodeIfPresent([LedgerEntry].self, forKey: .ledger) ?? []
+        pullRequest = try container.decodeIfPresent(PullRequest.self, forKey: .pullRequest)
+    }
+}
+
+/// A review cycle: rounds of verifiers checking one ticket until they pass or it runs out of
+/// rounds.
+public struct Verification: Decodable, Sendable {
+    public struct Outcome: OpenValue {
+        public let rawValue: String
+        public init(rawValue: String) { self.rawValue = rawValue }
+        public static let running = Self(rawValue: "running")
+        public static let passed = Self(rawValue: "passed")
+        public static let blocked = Self(rawValue: "blocked")
+    }
+
+    public let cycle: Int
+    /// Such as "Full"; a cycle from before levels has none.
+    public let level: CycleLevel?
+    public let maxRounds: Int
+    public let outcome: Outcome
+    public let rounds: [VerificationRound]
+}
+
+public struct CycleLevel: Decodable, Sendable {
+    public struct Kind: OpenValue {
+        public let rawValue: String
+        public init(rawValue: String) { self.rawValue = rawValue }
+        public static let fullReview = Self(rawValue: "full_review")
+        public static let recheck = Self(rawValue: "recheck")
+    }
+
+    public let name: String
+    public let kind: Kind
+}
+
+public struct VerificationRound: Decodable, Sendable {
+    public let round: Int
+    /// The commit every verifier of the round checks.
+    public let commit: String
+    public let verifiers: [VerifierRun]
+}
+
+/// One verifier's part in a round.
+public struct VerifierRun: Decodable, Sendable {
+    public struct Result: OpenValue {
+        public let rawValue: String
+        public init(rawValue: String) { self.rawValue = rawValue }
+        public static let pending = Self(rawValue: "pending")
+        public static let passed = Self(rawValue: "passed")
+        public static let failed = Self(rawValue: "failed")
+        public static let blocked = Self(rawValue: "blocked")
+    }
+
+    public let sessionID: String
+    public let role: Session.Role
+    /// Tells verifiers apart on a ticket, such as "Correctness".
+    public let focus: String
+    public let result: Result
+
+    private enum CodingKeys: String, CodingKey { case sessionID = "sessionId", role, focus, result }
+}
+
+/// A verifier's finding on a ticket, with where it stands.
+public struct LedgerEntry: Decodable, Sendable {
+    public struct Status: OpenValue {
+        public let rawValue: String
+        public init(rawValue: String) { self.rawValue = rawValue }
+        public static let open = Self(rawValue: "open")
+        public static let fixed = Self(rawValue: "fixed")
+        public static let untriaged = Self(rawValue: "untriaged")
+        public static let noted = Self(rawValue: "noted")
+        public static let fixNow = Self(rawValue: "fix_now")
+        public static let followUp = Self(rawValue: "follow_up")
+        public static let wontFix = Self(rawValue: "wont_fix")
+    }
+
+    public struct Severity: OpenValue {
+        public let rawValue: String
+        public init(rawValue: String) { self.rawValue = rawValue }
+        public static let blocking = Self(rawValue: "blocking")
+        public static let nonBlocking = Self(rawValue: "non_blocking")
+        public static let preExisting = Self(rawValue: "pre_existing")
+    }
+
+    /// `F1`, `F2`, … within the ticket.
+    public let id: String
+    public let severity: Severity
+    /// `path:line`.
+    public let location: String
+    public let summary: String
+    /// The verifier focus, cycle and round that last reported it.
+    public let focus: String
+    public let cycle: Int
+    public let round: Int
+    public let status: Status
 }
 
 /// A ticket branch's GitHub pull request, as the host last read it.
@@ -183,7 +323,7 @@ public struct PullRequest: Decodable, Sendable {
 
     public let number: Int
     public let url: String
-    public let state: State
+    public internal(set) var state: State
     public let draft: Bool
     /// The branch it merges into.
     public let base: String

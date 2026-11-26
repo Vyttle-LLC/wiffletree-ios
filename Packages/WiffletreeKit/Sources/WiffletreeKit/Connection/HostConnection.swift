@@ -14,6 +14,12 @@ public protocol HostConnection: Sendable {
     func request<Command: HostCommand>(_ command: Command) async throws -> Command.Reply
     /// Ends the connection and both streams for good.
     func close()
+    /// Whether this is the built-in demo host, which the app marks as such.
+    var isDemo: Bool { get }
+}
+
+extension HostConnection {
+    public var isDemo: Bool { false }
 }
 
 public enum ConnectionState: Equatable, Sendable {

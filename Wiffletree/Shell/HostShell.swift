@@ -25,5 +25,20 @@ struct HostShell: View {
             }
         }
         .environment(host)
+        .environment(\.showSection, ShowSectionAction { [binding = $section] in binding.wrappedValue = $0 })
     }
+}
+
+/// Moves to another of the host's tabs, for a screen that leads there, such as Home's "Need you"
+/// card leading to the Inbox.
+struct ShowSectionAction: Sendable {
+    let show: @MainActor @Sendable (HostShell.Section) -> Void
+
+    @MainActor func callAsFunction(_ section: HostShell.Section) {
+        show(section)
+    }
+}
+
+extension EnvironmentValues {
+    @Entry var showSection = ShowSectionAction { _ in }
 }

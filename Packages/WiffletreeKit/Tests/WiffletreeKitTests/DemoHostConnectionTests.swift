@@ -64,8 +64,9 @@ struct DemoHostConnectionTests {
     @Test func answeringAQuestionResolvesItAndTheCoordinatorReplies() async throws {
         let answered = try await demo.request(ResolveAttentionCommand(id: DemoID.mapTilesQuestion, answer: "OpenStreetMap"))
         #expect(answered.answer == "OpenStreetMap")
-        let events = await next(4, of: demo.events)
-        #expect(events.map(\.kind) == [.state, .attention(count: 2), .state, .steps(sessions: [DemoID.stationCoordinator])])
+        let events = await next(5, of: demo.events)
+        let steps = HostEvent.Kind.steps(sessions: [DemoID.stationCoordinator])
+        #expect(events.map(\.kind) == [.state, .attention(count: 2), steps, .state, steps])
 
         let snapshot = try await snapshot()
         #expect(openCount(snapshot) == 2)
@@ -154,13 +155,68 @@ struct DemoHostConnectionTests {
         let sent = try await demo.request(send)
         #expect(sent.sender == nil)
         #expect(try await demo.request(send).sequence == sent.sequence)
-        let events = await next(3, of: demo.events)
-        #expect(events.map(\.kind) == [.state, .state, .steps(sessions: [DemoID.tideCoordinator])])
+        let events = await next(4, of: demo.events)
+        let steps = HostEvent.Kind.steps(sessions: [DemoID.tideCoordinator])
+        #expect(events.map(\.kind) == [.state, steps, .state, steps])
 
         let conversation = try await demo.request(MessagesCommand(sessionID: DemoID.tideCoordinator))
-        #expect(conversation.suffix(2).map(\.sender) == [nil, DemoID.tideCoordinator])
+        #expect(conversation.suffix(2).map(\.kind) == [.human, .reply])
         #expect(conversation.count { $0.id == send.id } == 1)
         #expect(conversation.last?.createdAt == Int64(Self.now.timeIntervalSince1970 * 1000))
+    }
+
+    /// The coordinator's words come as the host's do: narration while its turn runs, then the
+    /// turn's reply as an `output:<run>` message.
+    @Test func aCoordinatorsWordsAreItsTurnOutput() async throws {
+        let released = AsyncStream<Void>.makeStream()
+        var options = DemoHostConnection.Options()
+        options.sleep = { _ in for await _ in released.stream { return } }
+        let demo = DemoHostConnection(options: options)
+        defer { demo.close() }
+        #expect(try await demo.request(StepsCommand(sessionID: DemoID.tideCoordinator)).runID == nil)
+
+        _ = try await demo.request(SendCommand(recipient: DemoID.tideCoordinator, body: "Status?"))
+        let running = try await demo.request(StepsCommand(sessionID: DemoID.tideCoordinator))
+        let runID = try #require(running.runID)
+        #expect(running.running)
+        #expect(running.narration.map(\.state) == [.running])
+        #expect(try await demo.request(StepsCommand(sessionID: DemoID.tideCoordinator, after: running.revision)).steps.isEmpty)
+
+        released.continuation.yield()
+        _ = await next(4, of: demo.events)
+        let finished = try await demo.request(StepsCommand(sessionID: DemoID.tideCoordinator, after: running.revision))
+        let reply = try #require(try await demo.request(MessagesCommand(sessionID: DemoID.tideCoordinator)).last)
+        #expect(!finished.running)
+        #expect(finished.narration.map(\.text) == [reply.body])
+        #expect(reply.kind == .reply)
+        #expect(reply.runID == runID)
+    }
+
+    @Test func theSeedsCoordinatorLinesAreReplies() async throws {
+        let conversation = try await demo.request(MessagesCommand(sessionID: DemoID.tideCoordinator))
+        #expect(conversation.map(\.kind) == [.reply, .reply, .notice, .agent, .agent, .human, .reply])
+        #expect(conversation.filter { $0.kind == .reply }.allSatisfy { $0.sender == DemoID.tideCoordinator })
+    }
+
+    @Test func aCoordinatorWaitingOnlyForAnApprovalIsReadyAfterItsReply() async throws {
+        _ = try await demo.request(SendCommand(recipient: DemoID.tideCoordinator, body: "Status?"))
+        _ = await next(4, of: demo.events)
+        let snapshot = try await snapshot()
+        #expect(snapshot.attention.contains { $0.sessionID == DemoID.tideCoordinator && $0.answer == nil })
+        #expect(snapshot.sessions.first { $0.id == DemoID.tideCoordinator }?.status == .ready)
+    }
+
+    @Test func aCoordinatorWithAQuestionOpenIsBlockedAfterItsReply() async throws {
+        _ = try await demo.request(SendCommand(recipient: DemoID.stationCoordinator, body: "Status?"))
+        _ = await next(4, of: demo.events)
+        #expect(try await snapshot().sessions.first { $0.id == DemoID.stationCoordinator }?.status == .blocked)
+    }
+
+    @Test func aNegativeLimitIsRefused() async throws {
+        await #expect(throws: ConnectionError.commandFailed("The limit can't be negative.")) {
+            try await demo.request(MessagesCommand(sessionID: DemoID.tideCoordinator, limit: -1))
+        }
+        #expect(try await demo.request(MessagesCommand(sessionID: DemoID.tideCoordinator, limit: 0)).isEmpty)
     }
 
     @Test func aReplyWaitsForTheDelay() async throws {
@@ -174,7 +230,7 @@ struct DemoHostConnectionTests {
         let before = try await demo.request(MessagesCommand(sessionID: DemoID.flakyCoordinator))
         #expect(before.last?.sender == nil)
         released.continuation.yield()
-        #expect(await next(3, of: demo.events).last?.kind == .steps(sessions: [DemoID.flakyCoordinator]))
+        #expect(await next(4, of: demo.events).last?.kind == .steps(sessions: [DemoID.flakyCoordinator]))
     }
 
     @Test func resumingAfterACursorReplaysNothingTwice() async throws {

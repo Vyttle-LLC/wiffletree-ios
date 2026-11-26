@@ -32,6 +32,10 @@
 	<string>Wiffletree uses the camera to scan the pairing QR code your Mac shows.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Wiffletree finds and connects to Wiffletree on your Mac over your local network.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Wiffletree uses the microphone when you dictate a reply to your coordinator.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Wiffletree turns your dictation into text on this iPhone. Your voice never leaves it.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

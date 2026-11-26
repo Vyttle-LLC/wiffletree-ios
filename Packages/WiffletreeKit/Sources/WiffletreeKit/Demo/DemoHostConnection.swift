@@ -38,6 +38,10 @@ public final class DemoHostConnection: HostConnection {
         var subscribers: [UUID: AsyncStream<HostEvent>.Continuation]
         /// Replies still on their way, cancelled by `close()`.
         var replies: [UUID: Task<Void, Never>] = [:]
+        /// Each session's latest run, as `steps` answers it.
+        var runs: [String: StepPage] = [:]
+        /// Counts step changes across sessions, as a host's per-session revisions grow.
+        var stepRevision: UInt64 = 0
         var cannedRepliesSent = 0
         var isClosed = false
     }
@@ -106,11 +110,14 @@ public final class DemoHostConnection: HostConnection {
                 return NoReply()
             case is SnapshotCommand:
                 return Snapshot(
-                    projects: workspace.projects, sessions: workspace.sessions, attention: workspace.attention,
-                    tickets: workspace.tickets, repositories: workspace.repositories
+                    projects: workspace.projects, spaces: workspace.spaces, sessions: workspace.sessions,
+                    runtimes: workspace.runtimes, attention: workspace.attention, tickets: workspace.tickets,
+                    repositories: workspace.repositories
                 )
             case let command as MessagesCommand:
                 return try messages(command, in: workspace)
+            case let command as StepsCommand:
+                return try steps(command, in: shared)
             case let command as SendCommand:
                 return try send(command, in: &shared)
             case let command as ResolveAttentionCommand:
@@ -131,8 +138,20 @@ public final class DemoHostConnection: HostConnection {
 
     private func messages(_ command: MessagesCommand, in workspace: DemoWorkspace) throws(ConnectionError) -> [Message] {
         _ = try session(command.sessionID, in: workspace)
+        // The host's limit is unsigned, so it refuses a negative one.
+        guard command.limit >= 0 else { throw .commandFailed("The limit can't be negative.") }
         let before = command.before ?? .max
         return Array(workspace.messages.filter { $0.recipient == command.sessionID && $0.sequence < before }.suffix(command.limit))
+    }
+
+    /// The session's latest run with only the steps changed after `after`; a session that never
+    /// ran has an empty page, as on the host.
+    private func steps(_ command: StepsCommand, in shared: Shared) throws(ConnectionError) -> StepPage {
+        _ = try session(command.sessionID, in: shared.workspace)
+        guard let run = shared.runs[command.sessionID], command.runID == nil || command.runID == run.runID else {
+            return StepPage(runID: command.runID, running: false, revision: command.after, steps: [])
+        }
+        return StepPage(runID: run.runID, running: run.running, revision: run.revision, steps: run.steps.filter { $0.revision > command.after })
     }
 
     private func send(_ command: SendCommand, in shared: inout Shared) throws(ConnectionError) -> Message {
@@ -140,10 +159,11 @@ public final class DemoHostConnection: HostConnection {
         let recipient = try session(command.recipient, in: shared.workspace)
         let message = append(id: command.id, from: nil, to: recipient, body: command.body, in: &shared)
         setStatus(.working, of: recipient.id, in: &shared)
-        emit([.state], in: &shared)
+        let run = startRun(of: recipient.id, in: &shared)
+        emit([.state, .steps(sessions: [recipient.id])], in: &shared)
         let reply = Self.cannedReplies[shared.cannedRepliesSent % Self.cannedReplies.count]
         shared.cannedRepliesSent += 1
-        scheduleReply(from: recipient.id, body: reply, in: &shared)
+        scheduleReply(from: recipient.id, run: run, body: reply, in: &shared)
         return message
     }
 
@@ -179,15 +199,16 @@ public final class DemoHostConnection: HostConnection {
             reply = "Thanks: **\(answer)** it is. I've passed it to the implementer."
         }
         setStatus(.working, of: attention.sessionID, in: &shared)
-        emit([.state, .attention(count: openCount(shared.workspace))], in: &shared)
-        scheduleReply(from: attention.sessionID, body: reply, in: &shared)
+        let run = startRun(of: attention.sessionID, in: &shared)
+        emit([.state, .attention(count: openCount(shared.workspace)), .steps(sessions: [attention.sessionID])], in: &shared)
+        scheduleReply(from: attention.sessionID, run: run, body: reply, in: &shared)
         return attention
     }
 
     /// Clears a question without waking its asker. Approvals can only be approved or denied.
     private func dismiss(_ id: String, in shared: inout Shared) throws(ConnectionError) -> Attention {
         let index = try openAttention(id, in: shared.workspace)
-        guard !Self.isApproval(shared.workspace.attention[index]) else {
+        guard !shared.workspace.attention[index].isApproval else {
             throw .commandFailed("Approve or deny a permission request")
         }
         shared.workspace.attention[index].answer = "Dismissed by the human"
@@ -249,10 +270,6 @@ public final class DemoHostConnection: HostConnection {
         workspace.attention.count { $0.answer == nil }
     }
 
-    private static func isApproval(_ attention: Attention) -> Bool {
-        ["permission:", "publish:", "merge:", "retarget:", "repository:"].contains { attention.operationID.hasPrefix($0) }
-    }
-
     @discardableResult
     private func append(id: String, from sender: String?, to recipient: Session, body: String, in shared: inout Shared) -> Message {
         let message = Message(
@@ -281,23 +298,43 @@ public final class DemoHostConnection: HostConnection {
 
     // MARK: - Replies and events
 
-    /// After `replyDelay`, the agent's reply lands in its conversation. Like the seed's, it is a
-    /// message the agent sends itself, since the client reads no turn output yet.
-    private func scheduleReply(from sessionID: String, body: String, in shared: inout Shared) {
+    /// Starts the agent's turn, as the host does when a message wakes it: a running run whose
+    /// first narration step says what it is doing. Returns the run's id.
+    private func startRun(of sessionID: String, in shared: inout Shared) -> String {
+        let runID = "demo-run-\(UUID().uuidString)"
+        let step = nextStep(id: "say", runID: runID, state: .running, text: "Reading the project's tickets…", in: &shared)
+        shared.runs[sessionID] = StepPage(runID: runID, running: true, revision: step.revision, steps: [step])
+        return runID
+    }
+
+    private func nextStep(id: String, runID: String, state: Step.State, text: String, in shared: inout Shared) -> Step {
+        shared.stepRevision += 1
+        return Step(id: id, runID: runID, kind: .narration, state: state, title: text, detail: text, seq: 0, revision: shared.stepRevision)
+    }
+
+    /// After `replyDelay`, the agent's turn ends with its reply, as the host ends one: the run's
+    /// narration is its final words, and the reply is a message the agent sends itself under
+    /// `output:<run>`.
+    private func scheduleReply(from sessionID: String, run runID: String, body: String, in shared: inout Shared) {
         let id = UUID()
         shared.replies[id] = Task { [weak self, options] in
             try? await options.sleep(options.replyDelay)
             guard !Task.isCancelled else { return }
-            self?.deliverReply(id, from: sessionID, body: body)
+            self?.deliverReply(id, from: sessionID, run: runID, body: body)
         }
     }
 
-    private func deliverReply(_ id: UUID, from sessionID: String, body: String) {
+    private func deliverReply(_ id: UUID, from sessionID: String, run runID: String, body: String) {
         shared.withLock { shared in
             guard !shared.isClosed, shared.replies.removeValue(forKey: id) != nil,
                   let sender = shared.workspace.sessions.first(where: { $0.id == sessionID }) else { return }
-            append(id: "demo-reply-\(id.uuidString)", from: sender.id, to: sender, body: body, in: &shared)
-            let stillAsking = shared.workspace.attention.contains { $0.sessionID == sessionID && $0.answer == nil }
+            let step = nextStep(id: "say", runID: runID, state: .succeeded, text: body, in: &shared)
+            shared.runs[sessionID] = StepPage(runID: runID, running: false, revision: step.revision, steps: [step])
+            append(id: Message.replyPrefix + runID, from: sender.id, to: sender, body: body, in: &shared)
+            // A coordinator waiting only on an approval is not blocked; only a question blocks it.
+            let stillAsking = shared.workspace.attention.contains {
+                $0.sessionID == sessionID && $0.answer == nil && !$0.isApproval
+            }
             setStatus(stillAsking ? .blocked : .ready, of: sessionID, in: &shared)
             emit([.state, .steps(sessions: [sessionID])], in: &shared)
         }

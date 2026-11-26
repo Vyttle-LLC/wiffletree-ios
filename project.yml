@@ -52,6 +52,8 @@ targets:
           - _wiffletree._tcp
         NSCameraUsageDescription: "Wiffletree uses the camera to scan the pairing QR code your Mac shows."
         NSLocalNetworkUsageDescription: "Wiffletree finds and connects to Wiffletree on your Mac over your local network."
+        NSMicrophoneUsageDescription: "Wiffletree uses the microphone when you dictate a reply to your coordinator."
+        NSSpeechRecognitionUsageDescription: "Wiffletree turns your dictation into text on this iPhone. Your voice never leaves it."
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         UILaunchScreen: {}

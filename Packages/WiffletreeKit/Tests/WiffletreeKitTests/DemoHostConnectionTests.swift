@@ -37,7 +37,8 @@ struct DemoHostConnectionTests {
         let snapshot = try await snapshot()
         let projectIDs = Set(snapshot.projects.map(\.id))
         let coordinators = Set(snapshot.sessions.filter { $0.role == .projectOrchestrator }.map(\.id))
-        #expect(snapshot.projects.map(\.name) == ["Tide alerts", "Station map", "Flaky sync test"])
+        #expect(snapshot.projects.map(\.name) == ["Tide alerts", "Station map", "Flaky sync test", "Legacy importer"])
+        #expect(snapshot.openProjects.map(\.name) == ["Tide alerts", "Station map", "Flaky sync test"])
         #expect(snapshot.sessions.count { $0.status == .working } == 4)
         #expect(snapshot.sessions.allSatisfy { projectIDs.contains($0.projectID) })
         #expect(snapshot.attention.allSatisfy { projectIDs.contains($0.projectID) && coordinators.contains($0.sessionID) })
@@ -56,7 +57,7 @@ struct DemoHostConnectionTests {
 
     @Test func inboxCountsMatchThePerProjectBadges() async throws {
         let snapshot = try await snapshot()
-        let badges = snapshot.projects.map { openCount(snapshot, in: $0.id) }
+        let badges = snapshot.openProjects.map { openCount(snapshot, in: $0.id) }
         #expect(badges == [1, 1, 1])
         #expect(openCount(snapshot) == badges.reduce(0, +))
     }

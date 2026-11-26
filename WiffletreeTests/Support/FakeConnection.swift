@@ -52,7 +52,8 @@ extension Snapshot {
         let attention = (0..<open).map { index in
             #"{"id": "a\#(index)", "projectId": "p", "sessionId": "s", "operationId": "question:\#(index)", "prompt": "Which?"}"#
         } + [#"{"id": "done", "projectId": "p", "sessionId": "s", "operationId": "question:x", "prompt": "Done?", "answer": "Yes"}"#]
-        let json = #"{"projects": [{"id": "p", "name": "Tide alerts"}], "sessions": [], "attention": [\#(attention.joined(separator: ","))]}"#
+        let coordinator = #"{"id": "s", "projectId": "p", "name": "Tide alerts", "role": "project_orchestrator", "provider": "claude", "status": "ready"}"#
+        let json = #"{"projects": [{"id": "p", "name": "Tide alerts"}], "sessions": [\#(coordinator)], "attention": [\#(attention.joined(separator: ","))]}"#
         return try! JSONDecoder().decode(Snapshot.self, from: Data(json.utf8))
     }
 }

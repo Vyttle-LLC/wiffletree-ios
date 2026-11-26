@@ -173,7 +173,7 @@ final class LiveHost: Identifiable {
             while let self, self.wantsSnapshot, !Task.isCancelled {
                 self.wantsSnapshot = false
                 guard let snapshot = try? await connection.request(SnapshotCommand()), !Task.isCancelled else { break }
-                self.snapshot = snapshot
+                self.snapshot = snapshot.withoutClosedProjects()
             }
             // A cancelled fetch's slot may already hold the next connection's.
             if !Task.isCancelled { self?.refresher = nil }

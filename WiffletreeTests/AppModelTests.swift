@@ -88,6 +88,25 @@ struct AppModelTests {
         #expect(harness.preferences.lastSeen(studio.id) != nil)
     }
 
+    @Test func aClosedProjectsInboxItemsAreNotCounted() async throws {
+        let harness = Harness([studio])
+        let host = try #require(harness.app.selected)
+        let connection = try harness.connection(studio)
+        let json = #"""
+        {"projects": [{"id": "p", "name": "Open"}, {"id": "x", "name": "Closed"}],
+         "sessions": [{"id": "s", "projectId": "p", "name": "Open", "role": "project_orchestrator", "provider": "claude", "status": "ready"}],
+         "attention": [{"id": "a", "projectId": "p", "sessionId": "s", "operationId": "question:1", "prompt": "Which?"},
+                       {"id": "b", "projectId": "x", "sessionId": "gone", "operationId": "question:2", "prompt": "Which?"}]}
+        """#
+        connection.set(try JSONDecoder().decode(Snapshot.self, from: Data(json.utf8)))
+        connection.yield(.connected(address: HostAddress(host: "192.168.1.20"), level: .control))
+
+        try await eventually { host.snapshot != nil }
+
+        #expect(host.openAttentionCount == 1)
+        #expect(host.snapshot?.projects.map(\.id) == ["p"])
+    }
+
     @Test func eventsRefreshTheSnapshotAndReachSubscribers() async throws {
         let harness = Harness([studio])
         let host = try #require(harness.app.selected)

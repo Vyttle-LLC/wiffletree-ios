@@ -8,7 +8,7 @@ struct FramingTests {
     }
 
     @Test func aRequestCarriesItsCommandsFieldsBesideItsType() throws {
-        let line = RequestLine(version: 2, id: "r1", command: MessagesCommand(sessionId: "c1", limit: 20))
+        let line = RequestLine(version: 2, id: "r1", command: MessagesCommand(sessionID: "c1", limit: 20))
         #expect(try json(line) == [
             "version": 2, "id": "r1",
             "command": ["type": "messages", "session_id": "c1", "limit": 20]
@@ -46,6 +46,9 @@ struct FramingTests {
         let snapshot = try #require(try HostJSON.decoder.decode(ResultBox<Snapshot>.self, from: data).result)
         #expect(snapshot.projects.map(\.name) == ["iOS app"])
         #expect(snapshot.sessions.first?.role == .projectOrchestrator)
+        #expect(snapshot.sessions.first?.projectID == "p1")
+        #expect(snapshot.attention.first?.sessionID == "c1")
+        #expect(snapshot.tickets.first?.coordinatorID == "c1")
         #expect(snapshot.attention.first?.options == ["Yes", "No"])
         #expect(snapshot.tickets.first?.state.rawValue == "a_state_from_the_future")
         #expect(snapshot.tickets.first?.pullRequest?.checks == .success)

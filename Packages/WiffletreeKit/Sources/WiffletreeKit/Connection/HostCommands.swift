@@ -14,15 +14,17 @@ public struct SnapshotCommand: HostCommand {
 public struct MessagesCommand: HostCommand {
     public typealias Reply = [Message]
     public static let type = "messages"
-    public let sessionId: String
+    public let sessionID: String
     public let before: Int64?
     public let limit: Int
 
-    public init(sessionId: String, before: Int64? = nil, limit: Int = 50) {
-        self.sessionId = sessionId
+    public init(sessionID: String, before: Int64? = nil, limit: Int = 50) {
+        self.sessionID = sessionID
         self.before = before
         self.limit = limit
     }
+
+    private enum CodingKeys: String, CodingKey { case sessionID = "sessionId", before, limit }
 }
 
 /// A message from the human to an agent, usually its project's coordinator. Sent again with the
@@ -71,17 +73,19 @@ public struct UsageCommand: HostCommand {
     public typealias Reply = UsageReport
     public static let type = "usage"
     public let days: Int
-    public let projectId: String?
+    public let projectID: String?
     public let provider: String?
     /// An IANA name, such as `Europe/London`, that decides where days start.
     public let timezone: String
 
-    public init(days: Int, projectId: String? = nil, provider: String? = nil, timezone: String = TimeZone.current.identifier) {
+    public init(days: Int, projectID: String? = nil, provider: String? = nil, timezone: String = TimeZone.current.identifier) {
         self.days = days
-        self.projectId = projectId
+        self.projectID = projectID
         self.provider = provider
         self.timezone = timezone
     }
+
+    private enum CodingKeys: String, CodingKey { case days, projectID = "projectId", provider, timezone }
 }
 
 /// Each provider's quota windows.
@@ -99,7 +103,7 @@ public struct PingCommand: HostCommand {
 }
 
 /// Turns the connection into a subscriber, after the events following `after` when the host
-/// still holds them, or after a `resync`. `HostConnection` sends it; a caller never needs to.
+/// still holds them, or after a `resync`. `RemoteHostConnection` sends it; a caller never needs to.
 struct SubscribeCommand: HostCommand {
     struct Subscribed: Decodable, Sendable {
         let cursor: Cursor

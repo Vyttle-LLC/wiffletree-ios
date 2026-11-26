@@ -2,7 +2,8 @@ import Foundation
 
 // The parts of the host's workspace the first screens show, as `workspace-core` serialises them.
 // Only the fields read here are modelled; the host's other fields are ignored. Enumerations the
-// host may grow are open string values, so a newer host never breaks decoding.
+// host may grow are open string values, so a newer host never breaks decoding. Ids are named
+// Swift's way, `projectID`; their keys name them as `HostJSON` converts `project_id`.
 
 /// A string value from a set the host may extend, such as a ticket's state.
 public protocol OpenValue: RawRepresentable, Codable, Hashable, Sendable, CustomStringConvertible where RawValue == String {
@@ -43,7 +44,9 @@ public struct Project: Decodable, Identifiable, Sendable {
     public let id: String
     public let name: String
     /// The project this one is filed under.
-    public let parentId: String?
+    public let parentID: String?
+
+    private enum CodingKeys: String, CodingKey { case id, name, parentID = "parentId" }
 }
 
 /// An agent: a coordinator, an implementer, a verifier.
@@ -69,12 +72,16 @@ public struct Session: Decodable, Identifiable, Sendable {
     }
 
     public let id: String
-    public let projectId: String
-    public let parentId: String?
+    public let projectID: String
+    public let parentID: String?
     public let name: String
     public let role: Role
     public let provider: String
     public let status: Status
+
+    private enum CodingKeys: String, CodingKey {
+        case id, projectID = "projectId", parentID = "parentId", name, role, provider, status
+    }
 }
 
 /// A message in a conversation; one with no sender is the human's.
@@ -82,7 +89,7 @@ public struct Message: Decodable, Identifiable, Sendable {
     public let id: String
     /// Orders a session's messages; `messages` pages by it.
     public let sequence: Int64
-    public let projectId: String
+    public let projectID: String
     public let sender: String?
     public let recipient: String
     /// Markdown.
@@ -90,29 +97,35 @@ public struct Message: Decodable, Identifiable, Sendable {
     public let receipt: String
     /// Milliseconds since the epoch.
     public let createdAt: Int64
+
+    private enum CodingKeys: String, CodingKey {
+        case id, sequence, projectID = "projectId", sender, recipient, body, receipt, createdAt
+    }
 }
 
 /// An Inbox item: an agent's question, or an approval such as publishing a pull request.
 /// Answer it with `ResolveAttention`; an approval takes the answer `approved`.
 public struct Attention: Decodable, Identifiable, Sendable {
     public let id: String
-    public let projectId: String
-    public let sessionId: String
+    public let projectID: String
+    public let sessionID: String
     /// What the item is about; approvals carry prefixes such as `publish:`.
-    public let operationId: String
+    public let operationID: String
     public let prompt: String
     /// Suggested answers; free text is always allowed.
     public let options: [String]
     public let answer: String?
 
-    private enum CodingKeys: String, CodingKey { case id, projectId, sessionId, operationId, prompt, options, answer }
+    private enum CodingKeys: String, CodingKey {
+        case id, projectID = "projectId", sessionID = "sessionId", operationID = "operationId", prompt, options, answer
+    }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
-        projectId = try container.decode(String.self, forKey: .projectId)
-        sessionId = try container.decode(String.self, forKey: .sessionId)
-        operationId = try container.decode(String.self, forKey: .operationId)
+        projectID = try container.decode(String.self, forKey: .projectID)
+        sessionID = try container.decode(String.self, forKey: .sessionID)
+        operationID = try container.decode(String.self, forKey: .operationID)
         prompt = try container.decode(String.self, forKey: .prompt)
         options = try container.decodeIfPresent([String].self, forKey: .options) ?? []
         answer = try container.decodeIfPresent(String.self, forKey: .answer)
@@ -137,12 +150,16 @@ public struct Ticket: Decodable, Identifiable, Sendable {
 
     public let id: String
     /// The project coordinator that owns the ticket.
-    public let coordinatorId: String
+    public let coordinatorID: String
     public let title: String
     public let brief: String
     public let branch: String
     public let state: State
     public let pullRequest: PullRequest?
+
+    private enum CodingKeys: String, CodingKey {
+        case id, coordinatorID = "coordinatorId", title, brief, branch, state, pullRequest
+    }
 }
 
 /// A ticket branch's GitHub pull request, as the host last read it.

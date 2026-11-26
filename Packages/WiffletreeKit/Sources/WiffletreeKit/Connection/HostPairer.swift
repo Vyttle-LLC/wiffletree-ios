@@ -2,9 +2,6 @@ import Foundation
 
 /// Pairs with a host by the `qr` method on `/pair`, and keeps the host in a store.
 public struct HostPairer: Sendable {
-    /// How long each pairing step may wait for the host.
-    static let stepLimit: Duration = .seconds(30)
-
     private let race: AddressRace
     private let store: any PairedHostStore
 
@@ -30,7 +27,7 @@ public struct HostPairer: Sendable {
             deviceKey: deviceKey.publicKey.base64EncodedString(),
             proof: pairing.proof.base64EncodedString()
         ))
-        switch try await channel.receive(json: PairReply.self, within: Self.stepLimit) {
+        switch try await channel.receive(json: PairReply.self, within: handshakeStepLimit) {
         case .refused(let reason):
             throw ConnectionError.pairingRefused(reason)
         case .paired(let confirm, let hostID):

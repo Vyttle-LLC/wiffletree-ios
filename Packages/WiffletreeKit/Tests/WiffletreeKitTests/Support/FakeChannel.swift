@@ -96,7 +96,6 @@ final class FakeDialer: ChannelDialer {
 
     private let behaviours: [String: Behaviour]
     private let host: FakeHost?
-    private let dialed = Mutex<[String]>([])
 
     /// With a `host`, answering addresses reach it; without, they reach nothing.
     init(_ behaviours: [String: Behaviour], host: FakeHost? = nil) {
@@ -104,11 +103,7 @@ final class FakeDialer: ChannelDialer {
         self.host = host
     }
 
-    /// The hosts dialed, in the order the dials began.
-    var dialedHosts: [String] { dialed.withLock { $0 } }
-
     func open(_ address: HostAddress, path: String, hostKey: Data) async throws(ConnectionError) -> any MessageChannel {
-        dialed.withLock { $0.append(address.host) }
         switch behaviours[address.host] ?? .fail {
         case .fail:
             throw .unreachable("")

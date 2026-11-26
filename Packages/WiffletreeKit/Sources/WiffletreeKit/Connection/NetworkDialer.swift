@@ -171,13 +171,14 @@ final class NetworkChannel: MessageChannel {
         await withCheckedContinuation { continuation in
             connection.receiveMessage { content, context, _, error in
                 let metadata = context?.protocolMetadata(definition: NWProtocolWebSocket.definition) as? NWProtocolWebSocket.Metadata
+                // A close frame arrives with an error too, so its reason is read first.
                 switch (error, metadata?.opcode) {
+                case (_, .close):
+                    continuation.resume(returning: .closed(reason: content.map { String(decoding: $0, as: UTF8.self) }))
                 case (.some, _), (nil, nil):
                     continuation.resume(returning: .closed(reason: nil))
                 case (nil, .text):
                     continuation.resume(returning: .text(String(decoding: content ?? Data(), as: UTF8.self)))
-                case (nil, .close):
-                    continuation.resume(returning: .closed(reason: content.map { String(decoding: $0, as: UTF8.self) }))
                 case (nil, _):
                     continuation.resume(returning: .other)
                 }

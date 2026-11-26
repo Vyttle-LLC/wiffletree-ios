@@ -16,6 +16,8 @@ actor FakeHost {
     var replyInReverseAfter: Int?
     /// Leaves `ping` unanswered, as a host that has gone away.
     var ignoresPings = false
+    /// Answers `subscribe` with an error.
+    var refusesSubscribe = false
 
     private(set) var devices: [KeyID: Data] = [:]
     private(set) var deviceNames: [String] = []
@@ -31,10 +33,11 @@ actor FakeHost {
         publicKey = P256.Signing.PrivateKey().publicKey.x963Representation
     }
 
-    func set(confirmsWrongly: Bool = false, replyInReverseAfter: Int? = nil, ignoresPings: Bool = false) {
+    func set(confirmsWrongly: Bool = false, replyInReverseAfter: Int? = nil, ignoresPings: Bool = false, refusesSubscribe: Bool = false) {
         self.confirmsWrongly = confirmsWrongly
         self.replyInReverseAfter = replyInReverseAfter
         self.ignoresPings = ignoresPings
+        self.refusesSubscribe = refusesSubscribe
     }
 
     /// A QR code for this host, as its Remote access page would show it.
@@ -156,6 +159,8 @@ actor FakeHost {
         commands.append(type)
         let reply: [String: Any]
         switch type {
+        case "subscribe" where refusesSubscribe:
+            reply = ["version": 2, "id": id, "result": NSNull(), "error": "No events today"]
         case "subscribe":
             return try await subscribe(after: command["after"] as? [String: Any], id: id, on: channel)
         case "ping":
@@ -164,7 +169,7 @@ actor FakeHost {
         case "snapshot":
             reply = ["version": 2, "id": id, "result": Self.snapshot, "error": NSNull(), "host_ms": 3]
         case "messages":
-            reply = ["version": 2, "id": id, "result": [Self.message(sessionId: command["session_id"] as! String)], "error": NSNull()]
+            reply = ["version": 2, "id": id, "result": [Self.message(sessionID: command["session_id"] as! String)], "error": NSNull()]
         default:
             reply = ["version": 2, "id": id, "result": NSNull(), "error": "Unknown command \(type)"]
         }
@@ -241,9 +246,9 @@ actor FakeHost {
         "a_field_from_the_future": ["anything": 1]
     ] }
 
-    private static func message(sessionId: String) -> [String: Any] {
+    private static func message(sessionID: String) -> [String: Any] {
         [
-            "sequence": 4, "id": "m1", "project_id": "p1", "sender": NSNull(), "recipient": sessionId,
+            "sequence": 4, "id": "m1", "project_id": "p1", "sender": NSNull(), "recipient": sessionID,
             "body": "**Hi**", "receipt": "delivered", "created_at": 1_795_000_000_000
         ]
     }

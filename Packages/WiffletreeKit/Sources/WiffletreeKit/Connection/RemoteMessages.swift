@@ -88,8 +88,7 @@ extension MessageChannel {
         try await send(String(decoding: data, as: UTF8.self))
     }
 
-    /// The next message as `T`, closing the channel if the host takes longer than `limit`: each
-    /// step before `Hello` has 30 seconds.
+    /// The next message as `T`, closing the channel if the host takes longer than `limit`.
     func receive<T: Decodable>(json type: T.Type, within limit: Duration, using decoder: JSONDecoder = JSONDecoder()) async throws(ConnectionError) -> T {
         let timedOut = Latch()
         let timer = Task {

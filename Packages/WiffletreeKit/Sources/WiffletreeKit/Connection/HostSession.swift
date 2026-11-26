@@ -30,7 +30,7 @@ actor HostSession {
         do throws(ConnectionError) {
             let level = try await answerChallenge(on: channel, host: host, deviceKey: deviceKey)
             try await channel.send(json: HelloLine(appVersion: appVersion), using: HostJSON.encoder)
-            let answer = try await channel.receive(json: HelloAnswer.self, within: HostPairer.stepLimit, using: HostJSON.decoder)
+            let answer = try await channel.receive(json: HelloAnswer.self, within: handshakeStepLimit, using: HostJSON.decoder)
             guard let welcome = answer.welcome else {
                 throw .incompatible(hostVersion: answer.refused?.hostVersion ?? "unknown")
             }
@@ -45,13 +45,13 @@ actor HostSession {
 
     /// Signs the host's challenge with the device key, after checking the host is the paired one.
     private static func answerChallenge(on channel: any MessageChannel, host: PairedHost, deviceKey: DeviceKey) async throws(ConnectionError) -> AccessLevel {
-        let challenge = try await channel.receive(json: Challenge.self, within: HostPairer.stepLimit)
+        let challenge = try await channel.receive(json: Challenge.self, within: handshakeStepLimit)
         guard KeyID(hex: challenge.hostID) == host.id else { throw .keyChanged }
         guard let bytes = Data(base64Encoded: challenge.challenge),
               let signature = try? deviceKey.sign(Pairing.challengeMessage(challenge: bytes, hostID: host.id, deviceID: deviceKey.id))
         else { throw .unexpectedMessage("a malformed challenge") }
         try await channel.send(json: ChallengeAnswer(deviceID: deviceKey.id.hex, signature: signature.base64EncodedString()))
-        switch try await channel.receive(json: ChallengeVerdict.self, within: HostPairer.stepLimit) {
+        switch try await channel.receive(json: ChallengeVerdict.self, within: handshakeStepLimit) {
         case .accepted(let level): return level
         case .unpaired: throw .unpaired
         }
@@ -85,6 +85,22 @@ actor HostSession {
         if let result = box.result { return result }
         if let nothing = NoReply() as? Command.Reply { return nothing }
         throw .unexpectedMessage("no result for \(Command.type)")
+    }
+
+    /// `request`, closing the connection if the host takes longer than `limit` to answer.
+    func request<Command: HostCommand>(_ command: Command, within limit: Duration) async throws(ConnectionError) -> Command.Reply {
+        let timedOut = Latch()
+        let timer = Task { [channel] in
+            try await Task.sleep(for: limit)
+            timedOut.set()
+            channel.close()
+        }
+        defer { timer.cancel() }
+        do {
+            return try await request(command)
+        } catch {
+            throw timedOut.isSet ? .timedOut : error
+        }
     }
 
     /// Waits until the connection ends, and says why.

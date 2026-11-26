@@ -53,13 +53,9 @@ struct HelloAnswer: Decodable {
 }
 
 /// The host's welcome: the protocol every later request uses, and what the host supports.
-public struct Welcome: Decodable, Equatable, Sendable {
-    public let `protocol`: Int
-    public let hostId: String
-    public let hostVersion: String
-    /// New each time the host starts; event cursors of another epoch cannot resume.
-    public let epoch: String
-    public let capabilities: [String]
+struct Welcome: Decodable {
+    let `protocol`: Int
+    let capabilities: [String]
 }
 
 /// Where a subscriber is in the host's event stream.

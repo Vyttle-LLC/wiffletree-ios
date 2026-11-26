@@ -163,8 +163,13 @@ public final class RemoteHostConnection: HostConnection {
         }
         if session.welcome.capabilities.contains("events") {
             let after = shared.withLock { $0.cursor }
-            let subscribed = try await session.request(SubscribeCommand(after: after))
-            shared.withLock { $0.cursor = $0.cursor ?? subscribed.cursor }
+            do throws(ConnectionError) {
+                let subscribed = try await session.request(SubscribeCommand(after: after), within: handshakeStepLimit)
+                shared.withLock { $0.cursor = $0.cursor ?? subscribed.cursor }
+            } catch {
+                await session.close()
+                throw error
+            }
         }
         var updated = host
         updated.addresses = host.addresses.answered(at: address)
@@ -196,24 +201,19 @@ public final class RemoteHostConnection: HostConnection {
     /// the run loop reconnects.
     private func keepAlive(_ session: HostSession) async {
         while (try? await Task.sleep(for: options.heartbeat)) != nil {
-            let limit = Task { [pingLimit = options.pingLimit] in
-                try await Task.sleep(for: pingLimit)
-                await session.close()
-            }
-            _ = try? await session.request(PingCommand())
-            limit.cancel()
+            _ = try? await session.request(PingCommand(), within: options.pingLimit)
         }
     }
 
-    /// The session to send on: the live one, or the next, or the reason there is none.
+    /// The session to send on: the live one, the one being opened, or the reason there is none.
     private func currentSession() async throws -> HostSession {
         try await withCheckedThrowingContinuation { continuation in
             let ready: Result<HostSession, ConnectionError>? = shared.withLock { shared in
                 if let session = shared.session { return .success(session) }
                 switch shared.state {
-                case .failed(let error): return .failure(error)
+                case .failed(let error), .waiting(_, let error): return .failure(error)
                 case .closed: return .failure(.closed)
-                default:
+                case .connecting, .connected:
                     shared.waiters.append(continuation)
                     return nil
                 }

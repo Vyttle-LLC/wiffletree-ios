@@ -48,7 +48,8 @@ struct RemoteHostConnectionTests {
 
     private func connect(
         addresses: [String: FakeDialer.Behaviour] = ["studio.local": .answer],
-        heartbeat: Duration = .seconds(3600)
+        heartbeat: Duration = .seconds(3600),
+        backoff: Duration = .milliseconds(1)
     ) async -> RemoteHostConnection {
         await host.pairDevice(device)
         let paired = PairedHost(
@@ -59,7 +60,7 @@ struct RemoteHostConnectionTests {
         )
         store.save(paired)
         var options = RemoteHostConnection.Options()
-        options.backoff = Backoff(first: .milliseconds(1), longest: .milliseconds(5))
+        options.backoff = Backoff(first: backoff, longest: backoff * 5)
         options.heartbeat = heartbeat
         options.pingLimit = .milliseconds(50)
         options.headStart = .milliseconds(10)
@@ -74,7 +75,7 @@ struct RemoteHostConnectionTests {
         defer { connection.close() }
         let snapshot = try await connection.request(SnapshotCommand())
         #expect(snapshot.projects.first?.id == "p1")
-        let messages = try await connection.request(MessagesCommand(sessionId: "c1"))
+        let messages = try await connection.request(MessagesCommand(sessionID: "c1"))
         #expect(messages.map(\.recipient) == ["c1"])
         #expect(await host.commands == ["subscribe", "snapshot", "messages"])
     }
@@ -93,7 +94,7 @@ struct RemoteHostConnectionTests {
         _ = try await connection.request(PingCommand())
         await host.set(replyInReverseAfter: 2)
         async let snapshot = connection.request(SnapshotCommand())
-        async let messages = connection.request(MessagesCommand(sessionId: "c1"))
+        async let messages = connection.request(MessagesCommand(sessionID: "c1"))
         #expect(try await snapshot.projects.count == 1)
         #expect(try await messages.count == 1)
     }
@@ -103,6 +104,25 @@ struct RemoteHostConnectionTests {
         defer { connection.close() }
         await #expect(throws: ConnectionError.commandFailed("Unknown command quotas")) {
             try await connection.request(QuotasCommand())
+        }
+    }
+
+    @Test func aRequestWhileWaitingThrowsTheReasonAtOnce() async throws {
+        let connection = await connect(addresses: ["192.168.1.20": .fail], backoff: .seconds(30))
+        defer { connection.close() }
+        let reason = ConnectionError.unreachable("192.168.1.20 did not answer")
+        await #expect(throws: reason) { try await connection.request(PingCommand()) }
+        let asked = ContinuousClock.now
+        await #expect(throws: reason) { try await connection.request(PingCommand()) }
+        #expect(ContinuousClock.now - asked < .seconds(5))
+    }
+
+    @Test func aRefusedSubscriptionFailsTheTry() async throws {
+        await host.set(refusesSubscribe: true)
+        let connection = await connect(backoff: .seconds(30))
+        defer { connection.close() }
+        await #expect(throws: ConnectionError.commandFailed("No events today")) {
+            try await connection.request(PingCommand())
         }
     }
 

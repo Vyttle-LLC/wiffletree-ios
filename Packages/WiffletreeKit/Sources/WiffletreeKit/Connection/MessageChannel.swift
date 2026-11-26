@@ -23,6 +23,11 @@ public enum ChannelPath {
     public static let v1 = "/v1"
 }
 
+/// How long each step of the handshake may wait for the host: each pairing step on `/pair`, and
+/// on `/v1` the challenge, `Hello` and the subscription that follows. The host allows each step
+/// before `Hello` 30 seconds.
+let handshakeStepLimit: Duration = .seconds(30)
+
 /// Why talking to a host failed. The descriptions are sentences for a person.
 public enum ConnectionError: Error, Equatable, Sendable {
     /// The certificate at one address carried another key than the pinned one. Address racing

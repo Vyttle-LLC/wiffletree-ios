@@ -82,7 +82,7 @@ final class PairingFlow {
         isPairing = true
         defer { isPairing = false }
         do {
-            let host = try await app.pair(payload, replacing: replacing)
+            let host = try await app.pair(payload)
             found = nil
             error = nil
             step = .paired(host)
@@ -90,6 +90,14 @@ final class PairingFlow {
         } catch {
             self.error = error.localizedDescription
         }
+    }
+
+    /// The Paired screen's Open: shows the new host, then forgets the one whose key changed.
+    /// The old host stays until now, so the shell presenting this flow isn't torn down first.
+    func open() {
+        guard case .paired(let host) = step else { return }
+        app.select(.paired(host.id))
+        if let replacing, replacing != host.id { app.remove(replacing) }
     }
 
     /// Cancel on the confirm sheet: back to the camera for a fresh code.

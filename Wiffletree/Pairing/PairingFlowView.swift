@@ -53,7 +53,7 @@ private struct PairingFlowView: View {
             ScanView(flow: flow)
         case .paired(let host):
             PairedView(name: host.name, level: app.host(.paired(host.id))?.level ?? host.level) {
-                app.select(.paired(host.id))
+                flow.open()
                 dismiss()
             }
         }

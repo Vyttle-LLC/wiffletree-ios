@@ -261,7 +261,8 @@ struct PairingFlowTests {
     }
 
     @Test func pairingAgainAHostWhoseKeyChangedReplacesIt() async throws {
-        let harness = Harness([studio])
+        let harness = Harness([office, studio])
+        harness.app.select(.paired(studio.id))
         let reinstalled = PairedHost.fake("Studio Mac")
         harness.paired = reinstalled
         let flow = PairingFlow(app: harness.app, start: .pairAgain(studio.id))
@@ -269,9 +270,13 @@ struct PairingFlowTests {
         flow.scanned(qrCode(for: reinstalled))
 
         await flow.confirm()
+        #expect(flow.step == .paired(reinstalled))
+        #expect(harness.app.selectedID == .paired(studio.id), "The shell showing the Paired screen stays up")
 
-        #expect(harness.app.hosts.map(\.id) == [.paired(reinstalled.id)])
-        #expect(harness.store.hosts().map(\.id) == [reinstalled.id])
+        flow.open()
+        #expect(harness.app.selectedID == .paired(reinstalled.id))
+        #expect(harness.app.hosts.map(\.id) == [.paired(office.id), .paired(reinstalled.id)])
+        #expect(harness.store.hosts().map(\.id) == [office.id, reinstalled.id])
     }
 
     @Test func aCancelledCodeIsIgnoredForAMomentWhileOthersOpenAtOnce() {

@@ -91,11 +91,9 @@ final class AppModel {
     }
 
     /// Pairs with the host a QR code names and connects to it. The caller opens it once the
-    /// person has seen the access level it was given. Pairing again a host whose key changed
-    /// names it as `replacing`, which is forgotten once the new pairing holds.
-    func pair(_ payload: QRPayload, replacing old: KeyID? = nil) async throws -> PairedHost {
+    /// person has seen the access level it was given.
+    func pair(_ payload: QRPayload) async throws -> PairedHost {
         let paired = try await dependencies.pair(payload)
-        if let old, old != paired.id { remove(old) }
         let replacement = live(paired)
         if let index = hosts.firstIndex(where: { $0.id == replacement.id }) {
             hosts[index].stop()

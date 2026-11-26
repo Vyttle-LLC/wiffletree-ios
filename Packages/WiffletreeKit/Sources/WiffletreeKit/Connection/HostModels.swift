@@ -54,9 +54,10 @@ public struct Snapshot: Decodable, Sendable {
 
     /// The projects still open. Archiving a project's coordinator closes the project, and the
     /// snapshot leaves an archived coordinator out, so a project is open while it has an
-    /// unarchived one, as the desktop decides (`filing.rs`).
+    /// unarchived one, whoever its parent is: an Assistant's `start_work` project's coordinator
+    /// has the Assistant, which no snapshot lists, as its parent.
     public var openProjects: [Project] {
-        let open = Set(sessions.filter { $0.role == .projectOrchestrator && $0.parentID == nil && !$0.archived }.map(\.projectID))
+        let open = Set(sessions.filter { $0.role == .projectOrchestrator && !$0.archived }.map(\.projectID))
         return projects.filter { open.contains($0.id) }
     }
 

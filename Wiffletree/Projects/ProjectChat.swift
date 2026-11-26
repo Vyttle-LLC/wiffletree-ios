@@ -91,6 +91,9 @@ final class ProjectChat {
     /// The last send that failed. Retrying the same message reuses its id, so the host stores it
     /// once; a changed message gets a new id, which the host requires.
     @ObservationIgnored private var unsent: SendCommand?
+    /// The newest sequence the last newest page held. A sent message shows before any page holds
+    /// it, so it never counts towards whether a page reaches back to the loaded history.
+    @ObservationIgnored private var newestPaged: Int64?
 
     /// - Parameter pageSize: The host's largest page by default, as the desktop reads.
     init(host: LiveHost, projectID: String, pageSize: Int = 100) {
@@ -263,12 +266,13 @@ final class ProjectChat {
     private func mergeNewest(_ page: [Message]) {
         let isFull = page.count == pageSize
         let older: [Message]
-        if let first = page.first, isFull, let newest = messages.last, newest.sequence >= first.sequence {
+        if let first = page.first, isFull, let newestPaged, newestPaged >= first.sequence {
             older = messages.filter { $0.sequence < first.sequence }
         } else {
             older = []
         }
         messages = older + page
+        newestPaged = page.last?.sequence
         if older.isEmpty { hasEarlier = isFull }
     }
 

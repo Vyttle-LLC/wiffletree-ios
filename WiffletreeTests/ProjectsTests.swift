@@ -13,6 +13,16 @@ private func eventually(_ condition: () -> Bool) async throws {
     #expect(condition())
 }
 
+/// Waits for the demo to reach a state only a request can read.
+@MainActor
+private func eventuallyAsync(_ condition: () async throws -> Bool) async throws {
+    for _ in 0..<200 {
+        if try await condition() { return }
+        try await Task.sleep(for: .milliseconds(10))
+    }
+    #expect(try await condition())
+}
+
 /// The demo host as Home sees it, with replies that come when `sleep` lets them.
 @MainActor
 private func demoHost(sleep: @escaping @Sendable (Duration) async throws -> Void = { _ in }) async throws -> LiveHost {
@@ -262,6 +272,32 @@ struct ProjectChatTests {
         #expect(chat.messages.suffix(4).map(\.kind) == [.human, .reply, .human, .reply])
         #expect(Set(chat.messages.map(\.id)).count == 11)
         #expect(!chat.hasEarlier)
+    }
+
+    /// More messages arrive than a page holds while the chat is not reading them, then the person
+    /// sends. The sent message must not make the next newest page look continuous with the old
+    /// history: the page starts the history again, and "Load earlier" reaches every message.
+    @Test func aSendBeforeARefreshLeavesNoHoleInTheHistory() async throws {
+        let host = try await demoHost()
+        let chat = ProjectChat(host: host, projectID: Seed.tideAlerts, pageSize: 3)
+        await chat.reloadAll()
+        #expect(chat.messages.count == 3)
+
+        func everything() async throws -> [String] {
+            try await host.connection.request(MessagesCommand(sessionID: Seed.tideCoordinator, limit: 100)).map(\.id)
+        }
+        for body in ["Unseen one", "Unseen two"] {
+            _ = try await host.connection.request(SendCommand(recipient: Seed.tideCoordinator, body: body))
+        }
+        try await eventuallyAsync { try await everything().count == 11 }
+        chat.draft = "Mine"
+        await chat.send()
+        try await eventuallyAsync { try await everything().count == 13 }
+
+        await chat.reloadAll()
+        #expect(chat.messages.count == 3)
+        while chat.hasEarlier { await chat.loadEarlier() }
+        #expect(chat.messages.map(\.id) == (try await everything()))
     }
 
     /// A restart drops the snapshot; the conversation stays on screen and refreshes once the

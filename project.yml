@@ -1,0 +1,92 @@
+name: Wiffletree
+options:
+  bundleIdPrefix: com.vyttle
+  deploymentTarget:
+    iOS: "26.0"
+settings:
+  base:
+    SWIFT_VERSION: "6"
+    SWIFT_STRICT_CONCURRENCY: complete
+    DEVELOPMENT_TEAM: ""
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: "YES"
+packages:
+  # Local layered packages. The app target is a thin composition root.
+  WiffletreeKit:
+    path: Packages/WiffletreeKit
+targets:
+  Wiffletree:
+    type: application
+    platform: iOS
+    sources:
+      - Wiffletree
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.vyttle.wiffletree
+        INFOPLIST_FILE: Wiffletree/Info.plist
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_ENTITLEMENTS: Wiffletree/Wiffletree.entitlements
+    dependencies:
+      - package: WiffletreeKit
+    info:
+      path: Wiffletree/Info.plist
+      properties:
+        CFBundleDevelopmentRegion: "$(DEVELOPMENT_LANGUAGE)"
+        CFBundleDisplayName: Wiffletree
+        CFBundleExecutable: "$(EXECUTABLE_NAME)"
+        CFBundleIdentifier: "$(PRODUCT_BUNDLE_IDENTIFIER)"
+        CFBundleInfoDictionaryVersion: "6.0"
+        CFBundleName: "$(PRODUCT_NAME)"
+        CFBundlePackageType: "$(PRODUCT_BUNDLE_PACKAGE_TYPE)"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        # Uses only exempt encryption (TLS) — answers the export-compliance
+        # question up front so TestFlight builds are testable immediately.
+        ITSAppUsesNonExemptEncryption: false
+        LSApplicationCategoryType: "public.app-category.developer-tools"
+        NSBonjourServices:
+          - _wiffletree._tcp
+        NSCameraUsageDescription: "Wiffletree uses the camera to scan the pairing QR code your Mac shows."
+        NSLocalNetworkUsageDescription: "Wiffletree finds and connects to Wiffletree on your Mac over your local network."
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    # No capabilities yet: push and iCloud follow the Apple developer setup.
+    entitlements:
+      path: Wiffletree/Wiffletree.entitlements
+      properties: {}
+  WiffletreeTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - WiffletreeTests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: true
+        PRODUCT_BUNDLE_IDENTIFIER: com.vyttle.wiffletreetests
+    dependencies:
+      - target: Wiffletree
+      - package: WiffletreeKit
+schemes:
+  Wiffletree:
+    build:
+      targets:
+        Wiffletree: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - WiffletreeTests
+        - package: WiffletreeKit/WiffletreeKitTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

@@ -7,7 +7,7 @@ The app speaks the host's [remote protocol](https://github.com/Vyttle-LLC/wiffle
 ## Layout
 
 - `Wiffletree/` — the app target, a thin composition root.
-- `Packages/WiffletreeKit/` — everything that is not UI, with no UIKit or SwiftUI. Today: the pairing cryptography (keys and ids, the transcript, the `qr` method's proof and confirmation, the `/v1` challenge, device names), the pairing QR code's payload, and the Keychain store for the device's key.
+- `Packages/WiffletreeKit/` — everything that is not UI, with no UIKit or SwiftUI. Today: the pairing cryptography (keys and ids, the transcript, the `qr` method's proof and confirmation, the `/v1` challenge, device names), the pairing QR code's payload, the Keychain store for the device's key, and the connection client: TLS pinned to the host's key, address racing, pairing by QR code, the paired-host store, and the host protocol with events that resume after a drop.
 - `WiffletreeTests/` — tests that need the app as host, such as the Keychain.
 - `project.yml` — the XcodeGen source of `Wiffletree.xcodeproj`, which is committed.
 
@@ -28,3 +28,5 @@ xcodebuild test -scheme Wiffletree -destination 'platform=iOS Simulator,name=iPh
 ```
 
 CI runs the package tests, checks the project is in sync with `project.yml`, and builds the app and its tests for the simulator.
+
+`scripts/e2e/host-e2e.sh` checks the connection client against a real host on this Mac, building it from a Wiffletree checkout. It runs locally only, and needs port 47821 free.

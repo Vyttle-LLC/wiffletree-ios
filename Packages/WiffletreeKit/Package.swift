@@ -13,7 +13,7 @@ let package = Package(
         .testTarget(
             name: "WiffletreeKitTests",
             dependencies: ["WiffletreeKit"],
-            resources: [.copy("Fixtures/pairing_vectors.json")]
+            resources: [.copy("Fixtures/pairing_vectors.json"), .copy("Fixtures/host_certificate.der")]
         )
     ]
 )

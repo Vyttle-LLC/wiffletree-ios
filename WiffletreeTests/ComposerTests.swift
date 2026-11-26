@@ -46,6 +46,31 @@ private final class RefusingConnection: HostConnection {
     }
 }
 
+/// The demo, losing the reply to its first `send` after storing the message, as a drop would.
+private final class LosingConnection: HostConnection {
+    let demo = DemoHostConnection()
+    private let lost = Mutex(false)
+    let sentIDs = Mutex<[String]>([])
+
+    var events: AsyncStream<HostEvent> { demo.events }
+    var states: AsyncStream<ConnectionState> { demo.states }
+    var isDemo: Bool { true }
+
+    func request<Command: HostCommand>(_ command: Command) async throws -> Command.Reply {
+        let reply = try await demo.request(command)
+        if let send = command as? SendCommand {
+            sentIDs.withLock { $0.append(send.id) }
+            let first = lost.withLock { lost in defer { lost = true }; return !lost }
+            if first { throw ConnectionError.closed }
+        }
+        return reply
+    }
+
+    func close() {
+        demo.close()
+    }
+}
+
 @MainActor
 private func demoHost(_ connection: any HostConnection = DemoHostConnection()) async throws -> LiveHost {
     let host = LiveHost(id: .demo, paired: nil, lastSeen: nil, connect: { connection })
@@ -187,6 +212,32 @@ struct ComposerTests {
         #expect(chat.messages.last?.attachments.map(\.name) == ["Photo 1.jpg"])
         // Each piece stored once: the retry went on from the second.
         #expect(connection.offsets.withLock { $0 } == (0..<pieces).map { $0 * Upload.pieceLimit })
+    }
+
+    @Test func aRetryOfTheSameMessageReusesItsID() async throws {
+        let connection = LosingConnection()
+        let chat = try await chat(on: connection)
+        chat.draft = "A"
+        await chat.send()
+        #expect(chat.sendFailure != nil)
+        await chat.send()
+        #expect(chat.sendFailure == nil)
+        let ids = connection.sentIDs.withLock { $0 }
+        #expect(ids.count == 2 && ids[0] == ids[1])
+        #expect(chat.messages.filter { $0.body == "A" }.count == 1)
+    }
+
+    @Test func anEditedMessageAfterALostReplyGetsANewID() async throws {
+        let connection = LosingConnection()
+        let chat = try await chat(on: connection)
+        chat.draft = "A"
+        await chat.send()
+        chat.draft = "B"
+        await chat.send()
+        #expect(chat.sendFailure == nil)
+        let ids = connection.sentIDs.withLock { $0 }
+        #expect(ids.count == 2 && ids[0] != ids[1])
+        #expect(chat.messages.last?.body == "B")
     }
 
     @Test func viewOnlyHostsAndHostsWithoutUploadsHideThePlus() async throws {

@@ -70,8 +70,9 @@ final class ProjectChat {
     @ObservationIgnored private let host: LiveHost
     /// Names photos uniquely within a message, which the host requires.
     @ObservationIgnored private var photosNamed = 0
-    /// The message's id, kept across retries so the host stores it once.
-    @ObservationIgnored private var messageID = UUID().uuidString
+    /// The last send that failed. Retrying the same message reuses its id, so the host stores it
+    /// once; a changed message gets a new id, which the host requires.
+    @ObservationIgnored private var unsent: SendCommand?
 
     init(host: LiveHost, projectID: String) {
         self.host = host
@@ -153,16 +154,19 @@ final class ProjectChat {
                 return
             }
         }
-        let command = SendCommand(id: messageID, recipient: coordinator.id, body: body, uploads: photos.map(\.upload.id))
+        let uploads = photos.map(\.upload.id)
+        let retried = unsent.flatMap { $0.recipient == coordinator.id && $0.body == body && $0.uploads == uploads ? $0.id : nil }
+        let command = SendCommand(id: retried ?? UUID().uuidString, recipient: coordinator.id, body: body, uploads: uploads)
         do {
             let sent = try await host.connection.request(command)
             for (photo, attachment) in zip(photos, sent.attachments) { thumbnails[attachment.path] = photo.thumbnail }
             draft = ""
             photos = []
             photosNamed = 0
-            messageID = UUID().uuidString
+            unsent = nil
             if !messages.contains(where: { $0.id == sent.id }) { messages.append(sent) }
         } catch {
+            unsent = command
             sendFailure = error.localizedDescription
         }
     }

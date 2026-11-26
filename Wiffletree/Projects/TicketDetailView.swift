@@ -31,8 +31,13 @@ private struct TicketContent: View {
             Section {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(ticket.title).font(.title2.bold()).foregroundStyle(Tidal.text)
-                    let state = ticket.stateLabel
-                    Chip(state.text, tone: state.tone)
+                    HStack(spacing: 6) {
+                        let state = ticket.stateLabel
+                        Chip(state.text, tone: state.tone)
+                        if let repository = snapshot.repositories.first(where: { $0.id == ticket.repositoryID }) {
+                            Chip(repository.name, tone: .subtle)
+                        }
+                    }
                 }
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 4, trailing: 4))
@@ -46,19 +51,13 @@ private struct TicketContent: View {
                 }
             }
             if let pullRequest = ticket.pullRequest {
-                PullRequestSection(pullRequest: pullRequest, waitsInInbox: mergeWaitsInInbox)
+                PullRequestSection(pullRequest: pullRequest, waitsInInbox: snapshot.mergeWaitsInInbox(ticket))
             }
             ReviewSections(ticket: ticket)
             AgentsSection(ticket: ticket, snapshot: snapshot)
         }
         .foregroundStyle(Tidal.text)
     }
-
-    /// Whether the merge is approved in the Inbox: only into a branch that is not protected
-    /// (design call 7). Every other pull request is merged on GitHub.
-    // TODO: `!snapshot.isProtected(ticket)` and an open `merge:` approval for this ticket, once the
-    // Inbox ticket's Snapshot.isProtected and Ticket.merging land; until then every merge opens GitHub.
-    private var mergeWaitsInInbox: Bool { false }
 }
 
 private struct PullRequestSection: View {

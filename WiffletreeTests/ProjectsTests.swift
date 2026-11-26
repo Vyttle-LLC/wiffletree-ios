@@ -155,6 +155,59 @@ struct ProjectChatTests {
     }
 }
 
+/// Merge in Inbox shows only for a merge waiting on the human into a branch that is not protected.
+@MainActor
+@Suite(.timeLimit(.minutes(1)))
+struct MergeInInboxTests {
+    /// Two tickets in a repository whose base is `main`, each with its merge waiting in the Inbox:
+    /// one into a feature branch, one into `main`, plus one whose approval was already answered.
+    private let snapshot: Snapshot = {
+        func ticket(_ id: String, base: String) -> String {
+            #"""
+            {"id":"\#(id)","coordinator_id":"c1","repository_id":"r1","title":"T","brief":"…","branch":"b","state":"accepted",
+             "merging":{"number":1,"base":"\#(base)","stage":{"kind":"waiting_for_human","item":"a-\#(id)"}}}
+            """#
+        }
+        func approval(_ id: String, answer: String?) -> String {
+            let answer = answer.map { #""\#($0)""# } ?? "null"
+            return #"""
+            {"id":"a-\#(id)","project_id":"p","session_id":"c1","operation_id":"merge:m-\#(id)","prompt":"Merge?","answer":\#(answer)}
+            """#
+        }
+        let json = #"""
+        {"projects":[],"sessions":[],
+         "repositories":[{"id":"r1","name":"tidepool","base":"origin/main","protected_branches":[]}],
+         "tickets":[\#(ticket("feature", base: "feature/sync")),\#(ticket("main", base: "main")),\#(ticket("answered", base: "feature/x"))],
+         "attention":[\#(approval("feature", answer: nil)),\#(approval("main", answer: nil)),\#(approval("answered", answer: "approved"))]}
+        """#
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try! decoder.decode(Snapshot.self, from: Data(json.utf8))
+    }()
+
+    private func waits(_ id: String) throws -> Bool {
+        snapshot.mergeWaitsInInbox(try #require(snapshot.ticket(id)))
+    }
+
+    @Test func aMergeIntoAnUnprotectedBranchWaitsInTheInbox() throws {
+        #expect(try waits("feature"))
+    }
+
+    @Test func aMergeIntoAProtectedBranchOpensGitHubInstead() throws {
+        #expect(try !waits("main"))
+    }
+
+    @Test func anAnsweredApprovalNoLongerWaits() throws {
+        #expect(try !waits("answered"))
+    }
+
+    @Test func theDemosFeatureBranchMergeWaitsInTheInbox() async throws {
+        let snapshot = try #require(try await demoHost().snapshot)
+        let syncRetry = try #require(snapshot.ticket("demo-ticket-sync-retry"))
+        #expect(snapshot.mergeWaitsInInbox(syncRetry))
+    }
+}
+
 struct MarkdownBlockTests {
     @Test func aReplySplitsIntoParagraphsListsAndCode() {
         let blocks = MarkdownBlock.parse("""

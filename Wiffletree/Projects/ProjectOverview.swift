@@ -86,6 +86,16 @@ extension Snapshot {
         tickets.first { $0.id == id }
     }
 
+    /// Whether the ticket's merge is approved in the Inbox: its merge request waits there for the
+    /// human, and it merges into a branch that is not protected (design call 7). Every other pull
+    /// request is merged on GitHub.
+    func mergeWaitsInInbox(_ ticket: Ticket) -> Bool {
+        guard let stage = ticket.merging?.stage, stage.kind == .waitingForHuman,
+              attention.contains(where: { $0.id == stage.item && $0.answer == nil && $0.operationID.hasPrefix("merge:") })
+        else { return false }
+        return !mergesIntoProtectedBranch(ticket)
+    }
+
     /// The "Need you" card's sentence, such as "Station map asks “Which map tiles?”, and a
     /// publish and a merge wait for your approval."
     var needsYouSummary: String {

@@ -52,5 +52,27 @@ struct FramingTests {
         #expect(snapshot.attention.first?.options == ["Yes", "No"])
         #expect(snapshot.tickets.first?.state.rawValue == "a_state_from_the_future")
         #expect(snapshot.tickets.first?.pullRequest?.checks == .success)
+        #expect(snapshot.tickets.first?.verification == nil)
+        #expect(snapshot.tickets.first?.ledger.isEmpty == true)
+    }
+
+    @Test func aTicketCarriesItsReviewCyclesAndFindings() throws {
+        let text = #"""
+        {"id":"t1","coordinator_id":"c1","title":"Alert","brief":"…","worktree":"/w","branch":"b","state":"verifying",
+         "verification":{"cycle":2,"level":{"name":"Full","kind":"full_review"},"max_rounds":3,"outcome":"running",
+          "rounds":[{"round":1,"commit":"8be41a9","verifiers":[{"session_id":"v1","role":"reviewer","focus":"Correctness",
+           "message_id":"m1","result":"failed","report_id":"m2"}]}],"small":false},
+         "previous_cycles":[{"cycle":1,"max_rounds":3,"outcome":"blocked","rounds":[]}],
+         "ledger":[{"id":"F1","severity":"blocking","location":"src/alert.rs:88","summary":"Fires twice","trigger":"two thresholds",
+          "evidence":"…","focus":"Correctness","cycle":2,"round":1,"status":"open"}]}
+        """#
+        let ticket = try HostJSON.decoder.decode(Ticket.self, from: Data(text.utf8))
+        let round = try #require(ticket.verification?.rounds.first)
+        #expect(ticket.verification?.level?.kind == .fullReview)
+        #expect(ticket.verification?.outcome == .running)
+        #expect(round.verifiers.first?.result == .failed)
+        #expect(ticket.previousCycles.first?.level == nil)
+        #expect(ticket.ledger.first?.severity == .blocking)
+        #expect(ticket.ledger.first?.status == .open)
     }
 }

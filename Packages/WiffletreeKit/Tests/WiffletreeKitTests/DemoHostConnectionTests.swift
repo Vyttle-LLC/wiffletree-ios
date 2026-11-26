@@ -1,0 +1,177 @@
+import Foundation
+import Testing
+@testable import WiffletreeKit
+
+@Suite(.timeLimit(.minutes(1)))
+struct DemoHostConnectionTests {
+    private static let now = Date(timeIntervalSince1970: 1_795_000_000)
+
+    /// A demo whose replies come at once, at a fixed time.
+    private let demo: DemoHostConnection = {
+        var options = DemoHostConnection.Options()
+        options.now = { now }
+        options.sleep = { _ in }
+        return DemoHostConnection(options: options)
+    }()
+
+    private func snapshot() async throws -> Snapshot {
+        try await demo.request(SnapshotCommand())
+    }
+
+    private func openCount(_ snapshot: Snapshot, in projectID: String? = nil) -> Int {
+        snapshot.attention.count { $0.answer == nil && (projectID == nil || $0.projectID == projectID) }
+    }
+
+    private func ticket(_ id: String) async throws -> Ticket {
+        try #require(try await snapshot().tickets.first { $0.id == id })
+    }
+
+    private func next(_ count: Int, of events: AsyncStream<HostEvent>) async -> [HostEvent] {
+        var iterator = events.makeAsyncIterator()
+        var received: [HostEvent] = []
+        while received.count < count, let event = await iterator.next() { received.append(event) }
+        return received
+    }
+
+    @Test func theSeedTellsTheMockupsStory() async throws {
+        let snapshot = try await snapshot()
+        let projectIDs = Set(snapshot.projects.map(\.id))
+        let coordinators = Set(snapshot.sessions.filter { $0.role == .projectOrchestrator }.map(\.id))
+        #expect(snapshot.projects.map(\.name) == ["Tide alerts", "Station map", "Flaky sync test"])
+        #expect(snapshot.sessions.count { $0.status == .working } == 4)
+        #expect(snapshot.sessions.allSatisfy { projectIDs.contains($0.projectID) })
+        #expect(snapshot.attention.allSatisfy { projectIDs.contains($0.projectID) && coordinators.contains($0.sessionID) })
+        #expect(snapshot.tickets.allSatisfy { coordinators.contains($0.coordinatorID) })
+        #expect(snapshot.tickets.contains { $0.verification?.outcome == .running && !$0.ledger.isEmpty })
+        #expect(snapshot.tickets.contains { $0.pullRequest?.number == 212 })
+
+        let conversation = try await demo.request(MessagesCommand(sessionID: DemoID.tideCoordinator))
+        #expect(conversation.map(\.sequence) == conversation.map(\.sequence).sorted())
+        #expect(conversation.allSatisfy { $0.createdAt < Int64(Self.now.timeIntervalSince1970 * 1000) })
+        #expect(try await demo.request(UsageCommand(days: 7)).totals.input > 0)
+        #expect(try await demo.request(QuotasCommand()).map(\.provider) == ["claude", "codex"])
+        #expect(demo.isDemo)
+        #expect(DemoHostConnection.name == "Demo Mac")
+    }
+
+    @Test func inboxCountsMatchThePerProjectBadges() async throws {
+        let snapshot = try await snapshot()
+        let badges = snapshot.projects.map { openCount(snapshot, in: $0.id) }
+        #expect(badges == [1, 1, 1])
+        #expect(openCount(snapshot) == badges.reduce(0, +))
+    }
+
+    @Test func answeringAQuestionResolvesItAndTheCoordinatorReplies() async throws {
+        let answered = try await demo.request(ResolveAttentionCommand(id: DemoID.mapTilesQuestion, answer: "OpenStreetMap"))
+        #expect(answered.answer == "OpenStreetMap")
+        let events = await next(4, of: demo.events)
+        #expect(events.map(\.kind) == [.state, .attention(count: 2), .state, .steps(sessions: [DemoID.stationCoordinator])])
+
+        let snapshot = try await snapshot()
+        #expect(openCount(snapshot) == 2)
+        #expect(openCount(snapshot, in: DemoID.stationMap) == 0)
+        #expect(snapshot.sessions.first { $0.id == DemoID.stationCoordinator }?.status == .ready)
+        let reply = try await demo.request(MessagesCommand(sessionID: DemoID.stationCoordinator)).last
+        #expect(reply?.sender == DemoID.stationCoordinator)
+        #expect(reply?.body.contains("OpenStreetMap") == true)
+
+        await #expect(throws: ConnectionError.commandFailed("Request already resolved; stale answer rejected")) {
+            try await demo.request(ResolveAttentionCommand(id: DemoID.mapTilesQuestion, answer: "Apple Maps"))
+        }
+    }
+
+    @Test func approvingAPublishOpensItsPullRequest() async throws {
+        #expect(try await ticket(DemoID.thresholdsTicket).pullRequest == nil)
+        _ = try await demo.request(ResolveAttentionCommand(id: DemoID.publishApproval, answer: "approved"))
+        let pullRequest = try await ticket(DemoID.thresholdsTicket).pullRequest
+        #expect(pullRequest?.number == 214)
+        #expect(pullRequest?.state == .open)
+        #expect(await next(2, of: demo.events).map(\.kind) == [.state, .attention(count: 2)])
+    }
+
+    @Test func approvingAMergeMergesThePullRequest() async throws {
+        _ = try await demo.request(ResolveAttentionCommand(id: DemoID.mergeApproval, answer: "approved"))
+        #expect(try await ticket(DemoID.syncRetryTicket).pullRequest?.state == .merged)
+    }
+
+    @Test func denyingAMergeLeavesThePullRequestOpen() async throws {
+        let denied = try await demo.request(ResolveAttentionCommand(id: DemoID.mergeApproval, answer: "wait for the release"))
+        #expect(denied.answer == "wait for the release")
+        #expect(try await ticket(DemoID.syncRetryTicket).pullRequest?.state == .open)
+        #expect(openCount(try await snapshot()) == 2)
+    }
+
+    @Test func onlyAQuestionCanBeDismissedAndNobodyIsWoken() async throws {
+        await #expect(throws: ConnectionError.commandFailed("Approve or deny a permission request")) {
+            try await demo.request(DismissAttentionCommand(id: DemoID.publishApproval))
+        }
+        let dismissed = try await demo.request(DismissAttentionCommand(id: DemoID.mapTilesQuestion))
+        #expect(dismissed.answer == "Dismissed by the human")
+        #expect(await next(2, of: demo.events).map(\.kind) == [.state, .attention(count: 2)])
+        #expect(try await demo.request(MessagesCommand(sessionID: DemoID.stationCoordinator)).last?.sender == DemoID.stationCoordinator)
+        #expect(try await demo.request(MessagesCommand(sessionID: DemoID.stationCoordinator)).count == 3)
+    }
+
+    @Test func aMessageIsStoredOnceAndGetsAReply() async throws {
+        let send = SendCommand(recipient: DemoID.tideCoordinator, body: "Ship it?")
+        let sent = try await demo.request(send)
+        #expect(sent.sender == nil)
+        #expect(try await demo.request(send).sequence == sent.sequence)
+        let events = await next(3, of: demo.events)
+        #expect(events.map(\.kind) == [.state, .state, .steps(sessions: [DemoID.tideCoordinator])])
+
+        let conversation = try await demo.request(MessagesCommand(sessionID: DemoID.tideCoordinator))
+        #expect(conversation.suffix(2).map(\.sender) == [nil, DemoID.tideCoordinator])
+        #expect(conversation.count { $0.id == send.id } == 1)
+        #expect(conversation.last?.createdAt == Int64(Self.now.timeIntervalSince1970 * 1000))
+    }
+
+    @Test func aReplyWaitsForTheDelay() async throws {
+        let released = AsyncStream<Void>.makeStream()
+        var options = DemoHostConnection.Options()
+        options.sleep = { _ in for await _ in released.stream { return } }
+        let demo = DemoHostConnection(options: options)
+        defer { demo.close() }
+
+        _ = try await demo.request(SendCommand(recipient: DemoID.flakyCoordinator, body: "Status?"))
+        let before = try await demo.request(MessagesCommand(sessionID: DemoID.flakyCoordinator))
+        #expect(before.last?.sender == nil)
+        released.continuation.yield()
+        #expect(await next(3, of: demo.events).last?.kind == .steps(sessions: [DemoID.flakyCoordinator]))
+    }
+
+    @Test func resumingAfterACursorReplaysNothingTwice() async throws {
+        _ = try await demo.request(DismissAttentionCommand(id: DemoID.mapTilesQuestion))
+        _ = try await demo.request(ResolveAttentionCommand(id: DemoID.mergeApproval, answer: "approved"))
+        let seen = await next(2, of: demo.events)
+
+        let resumed = demo.events(after: seen.last?.cursor)
+        _ = try await demo.request(ResolveAttentionCommand(id: DemoID.publishApproval, answer: "approved"))
+        let rest = await next(4, of: resumed)
+        let seqs = (seen + rest).map(\.cursor.seq)
+        #expect(seqs == Array(1...6))
+
+        let stale = demo.events(after: Cursor(epoch: "another demo", seq: 3))
+        #expect(await next(1, of: stale).first?.kind == .resync)
+    }
+
+    @Test func whatTheDemoCannotDoIsRefusedPlainly() async throws {
+        await #expect(throws: DemoHostConnection.notAvailable) { try await demo.request(StopCommand()) }
+        #expect(DemoHostConnection.notAvailable.localizedDescription == "Not available in the demo.")
+    }
+
+    @Test func closingEndsTheStreamsAndRequests() async throws {
+        var states: [ConnectionState] = []
+        demo.close()
+        for await state in demo.states { states.append(state) }
+        #expect(states == [.connecting, .connected(address: DemoHostConnection.address, level: .control), .closed])
+        #expect(await next(1, of: demo.events).isEmpty)
+        await #expect(throws: ConnectionError.closed) { try await demo.request(SnapshotCommand()) }
+    }
+}
+
+/// A command the demo does not simulate.
+private struct StopCommand: HostCommand {
+    typealias Reply = NoReply
+    static let type = "stop"
+}

@@ -17,6 +17,13 @@ enum ChatEntry: Identifiable {
         }
     }
 
+    var messages: [Message] {
+        switch self {
+        case .human(let message), .reply(let message): [message]
+        case .activity(let messages): messages
+        }
+    }
+
     /// The conversation's messages in order, each unbroken run of agent messages and notices
     /// folded into one entry.
     static func fold(_ messages: [Message]) -> [ChatEntry] {
@@ -45,13 +52,18 @@ struct ComposerPhoto: Identifiable {
     var id: String { upload.id }
 }
 
-/// A project's conversation with its coordinator: the latest page of messages, the running
-/// turn's narration, and sending, with photos. `run()` keeps both current from the host's events.
+/// A project's conversation with its coordinator: the messages loaded so far, the running turn's
+/// narration, and sending, with photos. `run()` keeps both current from the host's events; the
+/// newest page merges into what is loaded, and earlier pages load on request.
 @MainActor
 @Observable
 final class ProjectChat {
     let projectID: String
+    /// Oldest first: the newest page and any earlier pages loaded since.
     private(set) var messages: [Message] = []
+    /// Whether the host may hold messages older than the loaded ones.
+    private(set) var hasEarlier = false
+    private(set) var isLoadingEarlier = false
     /// The coordinator's latest run; its narration shows while it runs.
     private(set) var turn: StepPage?
     /// Why the last load failed, until one succeeds.
@@ -70,15 +82,19 @@ final class ProjectChat {
     private(set) var unreadable: Set<String> = []
 
     @ObservationIgnored private let host: LiveHost
+    /// How many messages one read asks for.
+    @ObservationIgnored private let pageSize: Int
     /// Names photos uniquely within a message, which the host requires.
     @ObservationIgnored private var photosNamed = 0
     /// The last send that failed. Retrying the same message reuses its id, so the host stores it
     /// once; a changed message gets a new id, which the host requires.
     @ObservationIgnored private var unsent: SendCommand?
 
-    init(host: LiveHost, projectID: String) {
+    /// - Parameter pageSize: The host's largest page by default, as the desktop reads.
+    init(host: LiveHost, projectID: String, pageSize: Int = 100) {
         self.host = host
         self.projectID = projectID
+        self.pageSize = pageSize
     }
 
     var overview: ProjectOverview? { host.snapshot?.overview(of: projectID) }
@@ -204,18 +220,51 @@ final class ProjectChat {
         photos[index].upload = upload
     }
 
-    /// The latest messages and the whole latest turn: on opening, and after events were lost.
+    /// The page of messages before the oldest loaded one, added above it.
+    func loadEarlier() async {
+        guard hasEarlier, !isLoadingEarlier, let oldest = messages.first else { return }
+        isLoadingEarlier = true
+        defer { isLoadingEarlier = false }
+        await load { coordinator in
+            let page = try await host.connection.request(MessagesCommand(sessionID: coordinator, before: oldest.sequence, limit: pageSize))
+            // A newest page that landed meanwhile may have replaced what this page continues.
+            guard messages.first?.id == oldest.id else { return }
+            messages = page + messages
+            hasEarlier = page.count == pageSize
+        }
+    }
+
+    /// The newest messages and the whole latest turn: on opening, and after events were lost.
     private func reloadAll() async {
         await load { coordinator in
-            messages = try await host.connection.request(MessagesCommand(sessionID: coordinator))
+            try await reloadMessages(of: coordinator)
             turn = try await host.connection.request(StepsCommand(sessionID: coordinator))
         }
     }
 
     private func reloadMessages() async {
-        await load { coordinator in
-            messages = try await host.connection.request(MessagesCommand(sessionID: coordinator))
+        await load(reloadMessages(of:))
+    }
+
+    private func reloadMessages(of coordinator: String) async throws {
+        let page = try await host.connection.request(MessagesCommand(sessionID: coordinator, limit: pageSize))
+        mergeNewest(page)
+    }
+
+    /// Takes the newest page as the truth from its oldest message on, keeping the loaded messages
+    /// before it. A page short of full holds the whole conversation; a full one that does not
+    /// reach back to the loaded messages leaves a gap, so it starts the history again from itself
+    /// and "Load earlier" fills the rest.
+    private func mergeNewest(_ page: [Message]) {
+        let isFull = page.count == pageSize
+        let older: [Message]
+        if let first = page.first, isFull, let newest = messages.last, newest.sequence >= first.sequence {
+            older = messages.filter { $0.sequence < first.sequence }
+        } else {
+            older = []
         }
+        messages = older + page
+        if older.isEmpty { hasEarlier = isFull }
     }
 
     /// Only the steps changed since the turn last read, merged into it.

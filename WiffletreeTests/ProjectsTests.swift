@@ -46,7 +46,9 @@ private final class RecordingConnection: HostConnection {
 
     func request<Command: HostCommand>(_ command: Command) async throws -> Command.Reply {
         if let steps = command as? StepsCommand { log.withLock { $0.append("steps after \(steps.after)") } }
-        if command is MessagesCommand { log.withLock { $0.append("messages") } }
+        if let messages = command as? MessagesCommand {
+            log.withLock { $0.append(messages.before.map { "messages before \($0)" } ?? "messages") }
+        }
         return try await demo.request(command)
     }
 
@@ -175,6 +177,82 @@ struct ProjectChatTests {
         #expect(recording.sent.filter { $0 == "messages" }.count == 3)
         #expect(recording.sent.filter { $0.hasPrefix("steps") } == ["steps after 0", "steps after 0", "steps after \(started)"])
         #expect(chat.turn?.narration.map(\.text) == chat.messages.last.map { [$0.body] })
+    }
+
+    /// Tide alerts' seeded conversation holds 7 messages; a page of 3 shows the newest 3.
+    @Test func loadEarlierAsksForThePageBeforeTheOldestLoadedMessage() async throws {
+        let recording = RecordingConnection(DemoHostConnection())
+        let host = LiveHost(id: .demo, paired: nil, lastSeen: nil, connect: { recording })
+        try await eventually { host.snapshot != nil }
+        let chat = ProjectChat(host: host, projectID: Seed.tideAlerts, pageSize: 3)
+        let running = Task { await chat.run() }
+        defer { running.cancel() }
+        try await eventually { chat.turn != nil }
+        #expect(chat.messages.count == 3)
+        #expect(chat.hasEarlier)
+
+        let oldest = try #require(chat.messages.first)
+        await chat.loadEarlier()
+        #expect(recording.sent.last == "messages before \(oldest.sequence)")
+        #expect(chat.messages.count == 6)
+        #expect(chat.hasEarlier)
+
+        await chat.loadEarlier()
+        #expect(chat.messages.count == 7)
+        #expect(!chat.hasEarlier)
+        #expect(chat.messages.map(\.sequence) == chat.messages.map(\.sequence).sorted())
+        #expect(chat.messages.first?.body.hasPrefix("Welcome to the demo.") == true)
+    }
+
+    /// The bug from the iPhone: each change replaced the conversation with the newest page, so
+    /// older messages vanished as it grew.
+    @Test func theNewestPageMergesWithoutDroppingEarlierMessages() async throws {
+        let host = try await demoHost()
+        let chat = ProjectChat(host: host, projectID: Seed.tideAlerts, pageSize: 3)
+        let running = Task { await chat.run() }
+        defer { running.cancel() }
+        try await eventually { chat.messages.count == 3 }
+        await chat.loadEarlier()
+        await chat.loadEarlier()
+        let loaded = chat.messages.map(\.id)
+        #expect(loaded.count == 7)
+
+        for body in ["One", "Two"] {
+            chat.draft = body
+            await chat.send()
+            try await eventually { chat.messages.last?.kind == .reply }
+        }
+        try await eventually { chat.messages.count == 11 }
+        #expect(Array(chat.messages.map(\.id).prefix(7)) == loaded)
+        #expect(chat.messages.suffix(4).map(\.kind) == [.human, .reply, .human, .reply])
+        #expect(Set(chat.messages.map(\.id)).count == 11)
+        #expect(!chat.hasEarlier)
+    }
+
+    /// A restart drops the snapshot; the conversation stays on screen and refreshes once the
+    /// coordinator is back, as the view runs the chat again.
+    @Test func aRestartKeepsTheHistoryVisible() async throws {
+        let host = try await demoHost()
+        let chat = ProjectChat(host: host, projectID: Seed.tideAlerts)
+        var running = Task { await chat.run() }
+        try await eventually { chat.turn != nil }
+        chat.draft = "Before the restart"
+        await chat.send()
+        try await eventually { chat.messages.last?.kind == .reply }
+        let loaded = chat.messages.map(\.id)
+        #expect(loaded.count == 9)
+
+        host.restart()
+        await running.value
+        #expect(chat.coordinator == nil)
+        #expect(chat.messages.map(\.id) == loaded)
+
+        try await eventually { chat.coordinator != nil }
+        running = Task { await chat.run() }
+        defer { running.cancel() }
+        // The restarted demo starts over from its seed, which the refresh shows.
+        try await eventually { chat.messages.count == 7 }
+        #expect(chat.messages.map(\.id) == Array(loaded.prefix(7)))
     }
 
     @Test func anEmptyDraftCannotBeSent() async throws {

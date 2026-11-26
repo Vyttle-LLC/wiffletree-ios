@@ -57,6 +57,18 @@ private struct ChatContent: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 16) {
+                        if chat.hasEarlier {
+                            LoadEarlier(isLoading: chat.isLoadingEarlier) {
+                                let anchor = chat.messages.first?.id
+                                Task {
+                                    await chat.loadEarlier()
+                                    // Keeps the message that was at the top in view.
+                                    if let entry = chat.entries.first(where: { $0.messages.contains { $0.id == anchor } }) {
+                                        proxy.scrollTo(entry.id, anchor: .top)
+                                    }
+                                }
+                            }
+                        }
                         ForEach(chat.entries) { entry in
                             EntryView(chat: chat, entry: entry, coordinatorName: chat.overview?.project.name ?? "Coordinator")
                         }
@@ -68,7 +80,7 @@ private struct ChatContent: View {
                     .padding(16)
                 }
                 .defaultScrollAnchor(.bottom)
-                .onChange(of: chat.messages.count) { proxy.scrollTo(bottom) }
+                .onChange(of: chat.messages.last?.id) { proxy.scrollTo(bottom) }
                 .onChange(of: chat.liveNarration.last?.text) { proxy.scrollTo(bottom) }
             }
             if let failure = chat.failure {
@@ -122,6 +134,25 @@ private struct EntryView: View {
         let name = host.snapshot?.sessions.first { $0.id == sender }?.name ?? "An agent"
         // "Reviewer · Correctness" reads as "Reviewer" in the folded line.
         return name.components(separatedBy: " · ").first ?? name
+    }
+}
+
+/// Above the oldest loaded message while the host holds earlier ones.
+private struct LoadEarlier: View {
+    let isLoading: Bool
+    let load: () -> Void
+
+    var body: some View {
+        Group {
+            if isLoading {
+                ProgressView()
+            } else {
+                Button("Load earlier messages", action: load)
+                    .font(.footnote.weight(.semibold))
+                    .tint(Tidal.accent)
+            }
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 

@@ -7,9 +7,17 @@ struct DemoWorkspace: Sendable {
     /// Oldest first, answered ones included, as the host keeps them.
     var attention: [Attention]
     var tickets: [Ticket]
+    var repositories: [Repository]
     var messages: [Message]
-    var usage: UsageReport
+    /// The week's tokens by project and model, which `usage` adds up for its scope.
+    var usage: [DemoUsage]
     var quotas: [QuotaReading]
+}
+
+/// One project's tokens on one model over the demo's week.
+struct DemoUsage: Sendable {
+    let projectID: String
+    let usage: ModelUsage
 }
 
 /// The ids the demo's behaviour and its tests refer to.
@@ -28,6 +36,8 @@ enum DemoID {
 
     static let thresholdsTicket = "demo-ticket-thresholds"
     static let syncRetryTicket = "demo-ticket-sync-retry"
+
+    static let tidepool = "demo-repository-tidepool"
 }
 
 /// The demo's starting workspace: the story the approved mockups in `design/mockups/` tell,
@@ -40,11 +50,17 @@ enum DemoSeed {
             sessions: sessions,
             attention: attention,
             tickets: tickets,
+            repositories: repositories,
             messages: messages(clock),
-            usage: usage(clock),
+            usage: usage,
             quotas: quotas(clock)
         )
     }
+
+    /// Every project works in tidepool, whose `main` only the human merges into.
+    private static let repositories = [
+        Repository(id: DemoID.tidepool, name: "tidepool", base: "origin/main"),
+    ]
 
     private static let projects = [
         Project(id: DemoID.tideAlerts, name: "Tide alerts", parentID: nil),
@@ -102,7 +118,7 @@ enum DemoSeed {
 
     private static let tickets = [
         Ticket(
-            id: DemoID.thresholdsTicket, coordinatorID: DemoID.tideCoordinator,
+            id: DemoID.thresholdsTicket, coordinatorID: DemoID.tideCoordinator, repositoryID: DemoID.tidepool,
             title: "Store alert thresholds per station",
             brief: "Keep a threshold per station in a `thresholds` table, set and listed with `tidepool threshold`.",
             branch: "wiffletree/store-alert-thresholds", state: .accepted,
@@ -111,7 +127,7 @@ enum DemoSeed {
             ])
         ),
         Ticket(
-            id: "demo-ticket-alert-command", coordinatorID: DemoID.tideCoordinator,
+            id: "demo-ticket-alert-command", coordinatorID: DemoID.tideCoordinator, repositoryID: DemoID.tidepool,
             title: "Add the tidepool alert command",
             brief: "`tidepool alert` checks each station against its threshold and sends one alert per crossing.",
             branch: "wiffletree/add-tidepool-alert", state: .verifying,
@@ -130,25 +146,25 @@ enum DemoSeed {
             ]
         ),
         Ticket(
-            id: "demo-ticket-station-page", coordinatorID: DemoID.tideCoordinator,
+            id: "demo-ticket-station-page", coordinatorID: DemoID.tideCoordinator, repositoryID: DemoID.tidepool,
             title: "Show thresholds on the station page",
             brief: "Show each station's threshold and its last alert on the station page, under the map.",
             branch: "wiffletree/show-thresholds-on-station-page", state: .assigned
         ),
         Ticket(
-            id: "demo-ticket-draw-stations", coordinatorID: DemoID.stationCoordinator,
+            id: "demo-ticket-draw-stations", coordinatorID: DemoID.stationCoordinator, repositoryID: DemoID.tidepool,
             title: "Draw stations on the map",
             brief: "Put a pin for every station on the station page's map.",
             branch: "wiffletree/draw-stations-on-the-map", state: .assigned
         ),
         Ticket(
-            id: "demo-ticket-station-pins", coordinatorID: DemoID.stationCoordinator,
+            id: "demo-ticket-station-pins", coordinatorID: DemoID.stationCoordinator, repositoryID: DemoID.tidepool,
             title: "Open a station's page from its pin",
             brief: "Tapping a station's pin opens its page.",
             branch: "wiffletree/open-station-from-pin", state: .planned
         ),
         Ticket(
-            id: DemoID.syncRetryTicket, coordinatorID: DemoID.flakyCoordinator,
+            id: DemoID.syncRetryTicket, coordinatorID: DemoID.flakyCoordinator, repositoryID: DemoID.tidepool,
             title: "Retry the sync on a lost lock",
             brief: "When the sync lock times out mid-sync, retry once instead of starting a second sync.",
             branch: "wiffletree/retry-sync-on-lost-lock", state: .accepted,
@@ -158,10 +174,14 @@ enum DemoSeed {
             pullRequest: PullRequest(
                 number: 212, url: "https://github.com/Vyttle-LLC/tidepool/pull/212", state: .open, draft: false,
                 base: "feature/sync-retry", mergeState: "clean", checks: .success
+            ),
+            merging: MergeRequest(
+                number: 212, base: "feature/sync-retry",
+                stage: MergeRequest.Stage(kind: .waitingForHuman, item: DemoID.mergeApproval)
             )
         ),
         Ticket(
-            id: "demo-ticket-lock-log", coordinatorID: DemoID.flakyCoordinator,
+            id: "demo-ticket-lock-log", coordinatorID: DemoID.flakyCoordinator, repositoryID: DemoID.tidepool,
             title: "Log who holds the sync lock",
             brief: "Log the lock's holder and age when a sync waits on it, so the next flake is easy to read.",
             branch: "wiffletree/log-sync-lock-holder", state: .verifying,
@@ -247,44 +267,53 @@ enum DemoSeed {
         }
     }
 
-    /// The last week: 8.8M tokens across the three projects.
-    private static func usage(_ clock: SeedClock) -> UsageReport {
-        let opus = TokenTotals(input: 1_400_000, output: 420_000, cacheRead: 4_100_000, cacheWrite: 300_000)
-        let codex = TokenTotals(input: 700_000, output: 190_000, cacheRead: 1_600_000, cacheWrite: 90_000)
-        let opusCost = Cost(input: 21.00, cacheRead: 6.15, cacheWrite: 5.63, output: 31.50)
-        let codexCost = Cost(input: 0.88, cacheRead: 0.20, cacheWrite: 0, output: 1.90)
-        return UsageReport(
-            startDate: clock.day(daysAgo: 6),
-            endDate: clock.day(daysAgo: 0),
-            totals: TokenTotals(
-                input: opus.input + codex.input,
-                output: opus.output + codex.output,
-                cacheRead: opus.cacheRead + codex.cacheRead,
-                cacheWrite: opus.cacheWrite + codex.cacheWrite
-            ),
-            cost: Cost(
-                input: opusCost.input + codexCost.input,
-                cacheRead: opusCost.cacheRead + codexCost.cacheRead,
-                cacheWrite: opusCost.cacheWrite + codexCost.cacheWrite,
-                output: opusCost.output + codexCost.output
-            ),
-            models: [
-                ModelUsage(provider: "claude", model: "claude-opus-5-5", counts: opus, cost: opusCost),
-                ModelUsage(provider: "codex", model: "gpt-5-codex", counts: codex, cost: codexCost),
-            ]
+    /// The last week: 8.8M tokens in 127 requests across the three projects. Station map's
+    /// team runs only on Claude.
+    private static let usage: [DemoUsage] = [
+        spent(on: .opus, in: DemoID.tideAlerts, uncached: 700_000, cacheRead: 2_050_000, cacheWrite: 150_000, output: 210_000, requests: 46),
+        spent(on: .codex, in: DemoID.tideAlerts, uncached: 420_000, cacheRead: 960_000, cacheWrite: 54_000, output: 114_000, requests: 21),
+        spent(on: .opus, in: DemoID.stationMap, uncached: 420_000, cacheRead: 1_230_000, cacheWrite: 90_000, output: 126_000, requests: 28),
+        spent(on: .opus, in: DemoID.flakySyncTest, uncached: 280_000, cacheRead: 820_000, cacheWrite: 60_000, output: 84_000, requests: 18),
+        spent(on: .codex, in: DemoID.flakySyncTest, uncached: 280_000, cacheRead: 640_000, cacheWrite: 36_000, output: 76_000, requests: 14),
+    ]
+
+    private static func spent(
+        on model: PricedModel, in projectID: String,
+        uncached: UInt64, cacheRead: UInt64, cacheWrite: UInt64, output: UInt64, requests: UInt64
+    ) -> DemoUsage {
+        let counts = TokenTotals(input: uncached + cacheRead + cacheWrite, output: output, cacheRead: cacheRead, cacheWrite: cacheWrite, requests: requests)
+        let perToken = 1e-6
+        let cost = Cost(
+            input: Double(uncached) * model.input * perToken,
+            cacheRead: Double(cacheRead) * model.cacheRead * perToken,
+            cacheWrite: Double(cacheWrite) * model.cacheWrite * perToken,
+            output: Double(output) * model.output * perToken
         )
+        return DemoUsage(projectID: projectID, usage: ModelUsage(provider: model.provider, model: model.name, counts: counts, cost: cost))
+    }
+
+    /// A model with its list prices per million tokens.
+    private struct PricedModel {
+        let provider: String
+        let name: String
+        let input, cacheRead, cacheWrite, output: Double
+
+        static let opus = Self(provider: "claude", name: "claude-opus-5-5", input: 15, cacheRead: 1.5, cacheWrite: 18.75, output: 75)
+        static let codex = Self(provider: "codex", name: "gpt-5-codex", input: 1.25, cacheRead: 0.125, cacheWrite: 0, output: 10)
     }
 
     /// Claude has 58% of its 5-hour window left; Codex's week is nearly spent.
     private static func quotas(_ clock: SeedClock) -> [QuotaReading] {
-        [
-            QuotaReading(provider: "claude", account: nil, observedAt: clock.milliseconds(minutesAgo: 1), windows: [
-                QuotaWindow(key: "five_hour", label: "5 hours", usedPercent: 42, resetsAt: clock.milliseconds(minutesAgo: -118)),
-                QuotaWindow(key: "weekly", label: "Weekly", usedPercent: 61, resetsAt: clock.milliseconds(minutesAgo: -2 * 24 * 60)),
+        let observed = clock.milliseconds(minutesAgo: 1)
+        let week: UInt64 = 7 * 24 * 60
+        return [
+            QuotaReading(provider: "claude", account: nil, observedAt: observed, windows: [
+                QuotaWindow(key: "five_hour", label: "5 hours", usedPercent: 42, observedAt: observed, durationMinutes: 300, resetsAt: clock.milliseconds(minutesAgo: -118)),
+                QuotaWindow(key: "weekly", label: "Weekly", usedPercent: 61, observedAt: observed, durationMinutes: week, resetsAt: clock.milliseconds(minutesAgo: -2 * 24 * 60)),
             ], error: nil),
-            QuotaReading(provider: "codex", account: nil, observedAt: clock.milliseconds(minutesAgo: 1), windows: [
-                QuotaWindow(key: "five_hour", label: "5 hours", usedPercent: 18, resetsAt: clock.milliseconds(minutesAgo: -178)),
-                QuotaWindow(key: "weekly", label: "Weekly", usedPercent: 88, resetsAt: clock.milliseconds(minutesAgo: -4 * 24 * 60)),
+            QuotaReading(provider: "codex", account: nil, observedAt: observed, windows: [
+                QuotaWindow(key: "five_hour", label: "5 hours", usedPercent: 18, observedAt: observed, durationMinutes: 300, resetsAt: clock.milliseconds(minutesAgo: -178)),
+                QuotaWindow(key: "weekly", label: "Weekly", usedPercent: 88, observedAt: observed, durationMinutes: week, resetsAt: clock.milliseconds(minutesAgo: -4 * 24 * 60)),
             ], error: nil),
         ]
     }
@@ -297,11 +326,5 @@ private struct SeedClock {
     /// Milliseconds since the epoch; a negative count is in the future.
     func milliseconds(minutesAgo minutes: Int) -> Int64 {
         Int64((now.timeIntervalSince1970 - Double(minutes * 60)) * 1000)
-    }
-
-    /// A day as `usage` names it, such as `2026-11-25`, in the device's time zone.
-    func day(daysAgo days: Int) -> String {
-        let date = Calendar.current.date(byAdding: .day, value: -days, to: now) ?? now
-        return date.formatted(Date.ISO8601FormatStyle(timeZone: .current).year().month().day())
     }
 }

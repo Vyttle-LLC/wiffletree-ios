@@ -105,7 +105,10 @@ public final class DemoHostConnection: HostConnection {
             case is PingCommand:
                 return NoReply()
             case is SnapshotCommand:
-                return Snapshot(projects: workspace.projects, sessions: workspace.sessions, attention: workspace.attention, tickets: workspace.tickets)
+                return Snapshot(
+                    projects: workspace.projects, sessions: workspace.sessions, attention: workspace.attention,
+                    tickets: workspace.tickets, repositories: workspace.repositories
+                )
             case let command as MessagesCommand:
                 return try messages(command, in: workspace)
             case let command as SendCommand:
@@ -114,8 +117,8 @@ public final class DemoHostConnection: HostConnection {
                 return try resolve(command.id, answer: command.answer, in: &shared)
             case let command as DismissAttentionCommand:
                 return try dismiss(command.id, in: &shared)
-            case is UsageCommand:
-                return workspace.usage
+            case let command as UsageCommand:
+                return usage(command, in: workspace)
             case is QuotasCommand:
                 return workspace.quotas
             default:
@@ -162,9 +165,15 @@ public final class DemoHostConnection: HostConnection {
             }
             reply = "Published: **#214** is open on Vyttle-LLC/tidepool, and its checks are running. It merges into `main`, so you merge it on GitHub."
         case DemoID.mergeApproval where approved:
-            updateTicket(DemoID.syncRetryTicket, in: &shared) { $0.pullRequest?.state = .merged }
+            updateTicket(DemoID.syncRetryTicket, in: &shared) { ticket in
+                ticket.pullRequest?.state = .merged
+                ticket.merging = nil
+            }
             reply = "Merged **#212** into `feature/sync-retry`. Flaky sync test now waits only on **Log who holds the sync lock**."
-        case DemoID.publishApproval, DemoID.mergeApproval:
+        case DemoID.mergeApproval:
+            updateTicket(DemoID.syncRetryTicket, in: &shared) { $0.merging = nil }
+            reply = "Understood, I've left it as it is. It stays accepted on its branch."
+        case DemoID.publishApproval:
             reply = "Understood, I've left it as it is. It stays accepted on its branch."
         default:
             reply = "Thanks: **\(answer)** it is. I've passed it to the implementer."
@@ -184,6 +193,37 @@ public final class DemoHostConnection: HostConnection {
         shared.workspace.attention[index].answer = "Dismissed by the human"
         emit([.state, .attention(count: openCount(shared.workspace))], in: &shared)
         return shared.workspace.attention[index]
+    }
+
+    /// The demo's one week of tokens, for the project and provider asked about. Whatever the
+    /// `days`, it reports that week, and its dates say so.
+    private func usage(_ command: UsageCommand, in workspace: DemoWorkspace) -> UsageReport {
+        let spent = workspace.usage.filter { spent in
+            (command.projectID.map { $0 == spent.projectID } ?? true) && (command.provider.map { $0 == spent.usage.provider } ?? true)
+        }
+        let models = Dictionary(grouping: spent.map(\.usage), by: \.model).values.map { usages in
+            ModelUsage(provider: usages[0].provider, model: usages[0].model, counts: .sum(usages.map(\.counts)), cost: .sum(usages.compactMap(\.cost)))
+        }
+        let coordinators = workspace.projects.compactMap { project -> CoordinatorUsage? in
+            let counts = spent.filter { $0.projectID == project.id }.map(\.usage.counts)
+            guard !counts.isEmpty,
+                  let coordinator = workspace.sessions.first(where: { $0.projectID == project.id && $0.role == .projectOrchestrator })
+            else { return nil }
+            return CoordinatorUsage(id: coordinator.id, project: project.name, own: .sum([]), workers: .sum(counts))
+        }
+        let timeZone = TimeZone(identifier: command.timezone) ?? .current
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let now = options.now()
+        let day = Date.ISO8601FormatStyle(timeZone: timeZone).year().month().day()
+        return UsageReport(
+            startDate: (calendar.date(byAdding: .day, value: -6, to: now) ?? now).formatted(day),
+            endDate: now.formatted(day),
+            totals: .sum(spent.map(\.usage.counts)),
+            cost: .sum(spent.compactMap(\.usage.cost)),
+            models: models.sorted { ($0.cost?.total ?? 0) > ($1.cost?.total ?? 0) },
+            coordinators: coordinators
+        )
     }
 
     // MARK: - Workspace
@@ -281,4 +321,27 @@ public final class DemoHostConnection: HostConnection {
         "Noted. Try the **Inbox** to see a decision land: answering a question or approving a publish updates the tickets here.",
         "Thanks. Everything in the demo is sample data that stays on this iPhone. Pair your Mac to work with your own projects.",
     ]
+}
+
+private extension TokenTotals {
+    static func sum(_ all: [TokenTotals]) -> TokenTotals {
+        TokenTotals(
+            input: all.reduce(0) { $0 + $1.input },
+            output: all.reduce(0) { $0 + $1.output },
+            cacheRead: all.reduce(0) { $0 + $1.cacheRead },
+            cacheWrite: all.reduce(0) { $0 + $1.cacheWrite },
+            requests: all.reduce(0) { $0 + $1.requests }
+        )
+    }
+}
+
+private extension Cost {
+    static func sum(_ all: [Cost]) -> Cost {
+        Cost(
+            input: all.reduce(0) { $0 + $1.input },
+            cacheRead: all.reduce(0) { $0 + $1.cacheRead },
+            cacheWrite: all.reduce(0) { $0 + $1.cacheWrite },
+            output: all.reduce(0) { $0 + $1.output }
+        )
+    }
 }

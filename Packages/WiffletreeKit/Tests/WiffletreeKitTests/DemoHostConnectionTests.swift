@@ -89,9 +89,46 @@ struct DemoHostConnectionTests {
         #expect(await next(2, of: demo.events).map(\.kind) == [.state, .attention(count: 2)])
     }
 
+    @Test func denyingAPublishOpensNoPullRequest() async throws {
+        let denied = try await demo.request(ResolveAttentionCommand(id: DemoID.publishApproval, answer: "denied"))
+        #expect(denied.answer == "denied")
+        #expect(try await ticket(DemoID.thresholdsTicket).pullRequest == nil)
+        #expect(openCount(try await snapshot()) == 2)
+    }
+
+    @Test func theMergeApprovalBelongsToAnUnprotectedMerge() async throws {
+        let snapshot = try await snapshot()
+        let ticket = try #require(snapshot.tickets.first { $0.merging?.stage.item == DemoID.mergeApproval })
+        #expect(ticket.id == DemoID.syncRetryTicket)
+        #expect(!snapshot.mergesIntoProtectedBranch(ticket))
+    }
+
     @Test func approvingAMergeMergesThePullRequest() async throws {
         _ = try await demo.request(ResolveAttentionCommand(id: DemoID.mergeApproval, answer: "approved"))
-        #expect(try await ticket(DemoID.syncRetryTicket).pullRequest?.state == .merged)
+        let ticket = try await ticket(DemoID.syncRetryTicket)
+        #expect(ticket.pullRequest?.state == .merged)
+        #expect(ticket.merging == nil)
+    }
+
+    @Test func usageHonoursTheProjectAndProvider() async throws {
+        let week = try await demo.request(UsageCommand(days: 7))
+        #expect(week.totals.total == 8_800_000)
+        #expect(week.totals.requests == 127)
+        #expect(week.coordinators.map(\.project) == ["Tide alerts", "Station map", "Flaky sync test"])
+        #expect(week.models?.map(\.model) == ["claude-opus-5-5", "gpt-5-codex"])
+
+        let stationMap = try await demo.request(UsageCommand(days: 7, projectID: DemoID.stationMap))
+        #expect(stationMap.totals.requests == 28)
+        #expect(stationMap.coordinators.map(\.id) == [DemoID.stationCoordinator])
+        #expect(stationMap.models?.map(\.provider) == ["claude"])
+
+        let codex = try await demo.request(UsageCommand(days: 7, provider: "codex"))
+        #expect(codex.totals.requests == 35)
+        #expect(codex.coordinators.map(\.project) == ["Tide alerts", "Flaky sync test"])
+
+        let none = try await demo.request(UsageCommand(days: 7, projectID: DemoID.stationMap, provider: "codex"))
+        #expect(none.totals.total == 0)
+        #expect(none.coordinators.isEmpty)
     }
 
     @Test func denyingAMergeLeavesThePullRequestOpen() async throws {

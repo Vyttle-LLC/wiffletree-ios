@@ -21,14 +21,16 @@ public struct Snapshot: Decodable, Sendable {
     /// The Inbox: questions and approvals waiting for the human.
     public let attention: [Attention]
     public let tickets: [Ticket]
+    public let repositories: [Repository]
 
-    private enum CodingKeys: String, CodingKey { case projects, sessions, attention, tickets }
+    private enum CodingKeys: String, CodingKey { case projects, sessions, attention, tickets, repositories }
 
-    public init(projects: [Project], sessions: [Session], attention: [Attention], tickets: [Ticket]) {
+    public init(projects: [Project], sessions: [Session], attention: [Attention], tickets: [Ticket], repositories: [Repository] = []) {
         self.projects = projects
         self.sessions = sessions
         self.attention = attention
         self.tickets = tickets
+        self.repositories = repositories
     }
 
     public init(from decoder: any Decoder) throws {
@@ -37,6 +39,15 @@ public struct Snapshot: Decodable, Sendable {
         sessions = try container.decode([Session].self, forKey: .sessions)
         attention = try container.decode([Attention].self, forKey: .attention)
         tickets = try container.decodeIfPresent([Ticket].self, forKey: .tickets) ?? []
+        repositories = try container.decodeIfPresent([Repository].self, forKey: .repositories) ?? []
+    }
+
+    /// Whether only the human may merge into the ticket's pull request's base, on GitHub. A ticket
+    /// whose repository is not listed counts as protected, so the phone never offers its merge.
+    public func mergesIntoProtectedBranch(_ ticket: Ticket) -> Bool {
+        guard let base = ticket.pullRequest?.base ?? ticket.merging?.base else { return false }
+        guard let repository = repositories.first(where: { $0.id == ticket.repositoryID }) else { return true }
+        return repository.protects(base)
     }
 }
 
@@ -161,6 +172,7 @@ public struct Ticket: Decodable, Identifiable, Sendable {
     public let id: String
     /// The project coordinator that owns the ticket.
     public let coordinatorID: String
+    public let repositoryID: String?
     public let title: String
     public let brief: String
     public let branch: String
@@ -172,18 +184,22 @@ public struct Ticket: Decodable, Identifiable, Sendable {
     /// Every finding verifiers recorded, across all cycles.
     public let ledger: [LedgerEntry]
     public internal(set) var pullRequest: PullRequest?
+    /// The merge the coordinator asked for, while the host carries it out.
+    public internal(set) var merging: MergeRequest?
 
     private enum CodingKeys: String, CodingKey {
-        case id, coordinatorID = "coordinatorId", title, brief, branch, state, verification, previousCycles, ledger, pullRequest
+        case id, coordinatorID = "coordinatorId", repositoryID = "repositoryId", title, brief, branch, state, verification,
+             previousCycles, ledger, pullRequest, merging
     }
 
     init(
-        id: String, coordinatorID: String, title: String, brief: String, branch: String, state: State,
+        id: String, coordinatorID: String, repositoryID: String? = nil, title: String, brief: String, branch: String, state: State,
         verification: Verification? = nil, previousCycles: [Verification] = [], ledger: [LedgerEntry] = [],
-        pullRequest: PullRequest? = nil
+        pullRequest: PullRequest? = nil, merging: MergeRequest? = nil
     ) {
         self.id = id
         self.coordinatorID = coordinatorID
+        self.repositoryID = repositoryID
         self.title = title
         self.brief = brief
         self.branch = branch
@@ -192,12 +208,14 @@ public struct Ticket: Decodable, Identifiable, Sendable {
         self.previousCycles = previousCycles
         self.ledger = ledger
         self.pullRequest = pullRequest
+        self.merging = merging
     }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
         coordinatorID = try container.decode(String.self, forKey: .coordinatorID)
+        repositoryID = try container.decodeIfPresent(String.self, forKey: .repositoryID)
         title = try container.decode(String.self, forKey: .title)
         brief = try container.decode(String.self, forKey: .brief)
         branch = try container.decode(String.self, forKey: .branch)
@@ -206,6 +224,7 @@ public struct Ticket: Decodable, Identifiable, Sendable {
         previousCycles = try container.decodeIfPresent([Verification].self, forKey: .previousCycles) ?? []
         ledger = try container.decodeIfPresent([LedgerEntry].self, forKey: .ledger) ?? []
         pullRequest = try container.decodeIfPresent(PullRequest.self, forKey: .pullRequest)
+        merging = try container.decodeIfPresent(MergeRequest.self, forKey: .merging)
     }
 }
 
@@ -332,6 +351,25 @@ public struct PullRequest: Decodable, Sendable {
     public let checks: Checks
 }
 
+/// A coordinator's `merge_ticket`, while the host carries it out.
+public struct MergeRequest: Decodable, Sendable {
+    public struct Stage: Decodable, Sendable {
+        public struct Kind: OpenValue {
+            public let rawValue: String
+            public init(rawValue: String) { self.rawValue = rawValue }
+            public static let waitingForHuman = Self(rawValue: "waiting_for_human")
+        }
+
+        public let kind: Kind
+        /// The Inbox item that asks the human, while the stage waits for them.
+        public let item: String?
+    }
+
+    public let number: Int
+    /// The branch it merges into.
+    public let base: String
+    public let stage: Stage
+}
 /// What `usage` answers, in part: the period's tokens and their estimated cost.
 public struct UsageReport: Decodable, Sendable {
     public let startDate: String
@@ -341,13 +379,28 @@ public struct UsageReport: Decodable, Sendable {
     public let cost: Cost?
     /// Every model used, most expensive first.
     public let models: [ModelUsage]?
+    /// Each coordinator's tokens, its team's included.
+    public let coordinators: [CoordinatorUsage]
+}
+
+public struct CoordinatorUsage: Decodable, Sendable {
+    public let id: String
+    /// The coordinator's project, by name.
+    public let project: String
+    public let own: TokenTotals
+    public let workers: TokenTotals
 }
 
 public struct TokenTotals: Decodable, Sendable {
+    /// Every input token, those read from and written to the cache included.
     public let input: UInt64
     public let output: UInt64
     public let cacheRead: UInt64
     public let cacheWrite: UInt64
+    public let requests: UInt64
+
+    /// Input and output, as the host totals them.
+    public var total: UInt64 { input + output }
 }
 
 public struct Cost: Decodable, Sendable {
@@ -380,7 +433,14 @@ public struct QuotaWindow: Decodable, Sendable {
     public let key: String
     /// Such as "5 hours" or "Weekly".
     public let label: String
+    /// Nil when the provider has not reported it: unavailable, never zero.
     public let usedPercent: Double?
+    /// When the provider last reported this window, in milliseconds since the epoch.
+    public let observedAt: Int64
+    /// The window's length, such as 300 for five hours.
+    public let durationMinutes: UInt64?
     /// Milliseconds since the epoch.
     public let resetsAt: Int64?
+
+    private enum CodingKeys: String, CodingKey { case key, label, usedPercent, observedAt, durationMinutes = "durationMins", resetsAt }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import Testing
 import WiffletreeKit
 @testable import Wiffletree
@@ -26,6 +27,31 @@ private func demoHost(sleep: @escaping @Sendable (Duration) async throws -> Void
 private enum Seed {
     static let tideAlerts = "demo-tide-alerts"
     static let stationMap = "demo-station-map"
+}
+
+/// The demo host, recording the conversation reads sent to it.
+private final class RecordingConnection: HostConnection {
+    private let demo: DemoHostConnection
+    private let log = Mutex<[String]>([])
+
+    init(_ demo: DemoHostConnection) {
+        self.demo = demo
+    }
+
+    var events: AsyncStream<HostEvent> { demo.events }
+    var states: AsyncStream<ConnectionState> { demo.states }
+    var isDemo: Bool { true }
+    var sent: [String] { log.withLock { $0 } }
+
+    func request<Command: HostCommand>(_ command: Command) async throws -> Command.Reply {
+        if let steps = command as? StepsCommand { log.withLock { $0.append("steps after \(steps.after)") } }
+        if command is MessagesCommand { log.withLock { $0.append("messages") } }
+        return try await demo.request(command)
+    }
+
+    func close() {
+        demo.close()
+    }
 }
 
 private func message(_ id: String, from sender: String?, to recipient: String = "c1") -> Message {
@@ -110,6 +136,34 @@ struct ProjectChatTests {
         released.continuation.yield()
         try await eventually { chat.liveNarration.isEmpty && chat.messages.last?.kind == .reply }
         #expect(chat.turn?.narration.last?.text == chat.messages.last?.body)
+    }
+
+    /// A steps event fetches only the newer steps and no messages; a state event fetches messages.
+    @Test func aStepsEventFetchesOnlyTheNewerSteps() async throws {
+        let released = AsyncStream<Void>.makeStream()
+        var options = DemoHostConnection.Options()
+        options.sleep = { _ in for await _ in released.stream { return } }
+        let recording = RecordingConnection(DemoHostConnection(options: options))
+        let host = LiveHost(id: .demo, paired: nil, lastSeen: nil, connect: { recording })
+        try await eventually { host.snapshot != nil }
+        let chat = ProjectChat(host: host, projectID: Seed.tideAlerts)
+        let running = Task { await chat.run() }
+        defer { running.cancel() }
+        try await eventually { chat.turn != nil }
+        #expect(recording.sent == ["messages", "steps after 0"])
+
+        chat.draft = "Status?"
+        await chat.send()
+        try await eventually { !chat.liveNarration.isEmpty }
+        let started = try #require(chat.turn?.revision)
+        released.continuation.yield()
+        try await eventually { chat.liveNarration.isEmpty && chat.messages.last?.kind == .reply }
+
+        // The send and the reply each brought a state event and a steps event.
+        try await eventually { recording.sent.count == 6 }
+        #expect(recording.sent.filter { $0 == "messages" }.count == 3)
+        #expect(recording.sent.filter { $0.hasPrefix("steps") } == ["steps after 0", "steps after 0", "steps after \(started)"])
+        #expect(chat.turn?.narration.map(\.text) == chat.messages.last.map { [$0.body] })
     }
 
     @Test func anEmptyDraftCannotBeSent() async throws {

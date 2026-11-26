@@ -74,13 +74,15 @@ final class ProjectChat {
     /// Loads the conversation, then follows the host's events until the task is cancelled.
     func run() async {
         let events = host.events()
-        await reload(steps: true)
+        await reloadAll()
         for await event in events {
             switch event.kind {
             case .steps(let sessions) where sessions.contains(coordinator?.id ?? ""):
-                await reload(steps: true)
-            case .state, .resync:
-                await reload(steps: false)
+                await refreshTurn()
+            case .state:
+                await reloadMessages()
+            case .resync:
+                await reloadAll()
             default:
                 break
             }
@@ -104,12 +106,32 @@ final class ProjectChat {
         }
     }
 
-    private func reload(steps: Bool) async {
+    /// The latest messages and the whole latest turn: on opening, and after events were lost.
+    private func reloadAll() async {
+        await load { coordinator in
+            messages = try await host.connection.request(MessagesCommand(sessionID: coordinator))
+            turn = try await host.connection.request(StepsCommand(sessionID: coordinator))
+        }
+    }
+
+    private func reloadMessages() async {
+        await load { coordinator in
+            messages = try await host.connection.request(MessagesCommand(sessionID: coordinator))
+        }
+    }
+
+    /// Only the steps changed since the turn last read, merged into it.
+    private func refreshTurn() async {
+        await load { coordinator in
+            let newer = try await host.connection.request(StepsCommand(sessionID: coordinator, after: turn?.revision ?? 0))
+            turn = turn.map { $0.merging(newer) } ?? newer
+        }
+    }
+
+    private func load(_ fetch: (_ coordinator: String) async throws -> Void) async {
         guard let coordinator else { return }
         do {
-            let page = try await host.connection.request(MessagesCommand(sessionID: coordinator.id))
-            messages = page
-            if steps { turn = try await host.connection.request(StepsCommand(sessionID: coordinator.id)) }
+            try await fetch(coordinator.id)
             failure = nil
         } catch {
             failure = error.localizedDescription

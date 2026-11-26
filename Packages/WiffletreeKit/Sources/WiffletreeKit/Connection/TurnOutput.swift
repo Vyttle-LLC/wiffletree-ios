@@ -40,6 +40,21 @@ public struct StepPage: Decodable, Sendable {
         self.steps = steps
     }
 
+    /// This page brought up to date with `newer`, the steps changed after its revision: a step
+    /// seen before is replaced, a new one added. A page of another run replaces this one.
+    public func merging(_ newer: StepPage) -> StepPage {
+        guard newer.runID == runID else { return newer }
+        var steps = steps
+        for step in newer.steps {
+            if let index = steps.firstIndex(where: { $0.id == step.id }) {
+                steps[index] = step
+            } else {
+                steps.append(step)
+            }
+        }
+        return StepPage(runID: runID, running: newer.running, revision: max(revision, newer.revision), steps: steps)
+    }
+
     /// What the agent has said so far in this run, in order.
     public var narration: [Step] {
         steps.filter { $0.kind == .narration }.sorted { $0.seq < $1.seq }

@@ -185,7 +185,8 @@ private struct VerifierRow: View {
             Spacer()
             let label = verdict
             StatusLabel(label.text, systemImage: label.systemImage, tone: label.tone)
-        }    }
+        }
+    }
 
     private var verdict: (text: String, systemImage: String, tone: Tone) {
         switch run.result {
@@ -210,7 +211,8 @@ private struct CycleRow: View {
             Spacer()
             let label = outcome
             StatusLabel(label.text, systemImage: label.systemImage, tone: label.tone)
-        }    }
+        }
+    }
 
     /// Such as "Tests, Correctness, Regressions · 1 round".
     private var detail: String {
@@ -242,7 +244,8 @@ private struct FindingRow: View {
             Spacer()
             let label = status
             Chip(label.text, tone: label.tone)
-        }    }
+        }
+    }
 
     private var severity: String {
         switch entry.severity {
@@ -297,5 +300,6 @@ struct AgentRow: View {
             Spacer()
             let label = agent.statusLabel
             StatusLabel(label.text, systemImage: label.systemImage, tone: label.tone)
-        }    }
+        }
+    }
 }

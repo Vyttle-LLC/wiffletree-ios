@@ -16,6 +16,8 @@ final class Dictation {
     @ObservationIgnored private var engine: AVAudioEngine?
     @ObservationIgnored private var request: SFSpeechAudioBufferRecognitionRequest?
     @ObservationIgnored private var task: SFSpeechRecognitionTask?
+    /// Counts the times dictation started, so a result is used only by the session that heard it.
+    @ObservationIgnored private var session = 0
 
     /// Starts listening. `onText` gets the whole transcript so far each time it grows.
     func start(onText: @escaping @MainActor (String) -> Void) async {
@@ -49,22 +51,28 @@ final class Dictation {
         self.engine = engine
         self.request = request
         isListening = true
+        session += 1
+        let session = session
         task = recognizer.recognitionTask(with: request, resultHandler: Self.results { [weak self] text, ended in
             Task { @MainActor in
+                // A result that arrives after this session stopped, such as the final one after
+                // Send, must not put the sent text back in the field.
+                guard let self, self.isListening, self.session == session else { return }
                 if let text { onText(text) }
-                if ended { self?.stop() }
+                if ended { self.stop() }
             }
         })
     }
 
-    /// Stops listening; what was heard stays in the field to edit.
+    /// Stops listening; what was heard so far stays in the field to edit, and nothing heard later
+    /// is added.
     func stop() {
         guard isListening else { return }
         isListening = false
         engine?.stop()
         engine?.inputNode.removeTap(onBus: 0)
         request?.endAudio()
-        task?.finish()
+        task?.cancel()
         engine = nil
         request = nil
         task = nil

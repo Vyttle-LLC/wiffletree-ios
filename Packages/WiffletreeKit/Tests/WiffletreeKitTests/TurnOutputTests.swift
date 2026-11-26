@@ -41,6 +41,30 @@ struct TurnOutputTests {
         #expect(page.steps.last?.kind == Step.Kind(rawValue: "telepathy"))
     }
 
+    @Test func aNewerPageUpdatesTheStepsItChangedAndAddsNewOnes() {
+        func step(_ id: String, _ state: Step.State, seq: UInt32, revision: UInt64, run: String = "r1") -> Step {
+            Step(id: id, runID: run, kind: .narration, state: state, title: id, detail: nil, seq: seq, revision: revision)
+        }
+        let page = StepPage(runID: "r1", running: true, revision: 3, steps: [
+            step("a", .succeeded, seq: 1, revision: 1), step("b", .running, seq: 2, revision: 3),
+        ])
+        let merged = page.merging(StepPage(runID: "r1", running: false, revision: 5, steps: [
+            step("b", .succeeded, seq: 2, revision: 5), step("c", .succeeded, seq: 3, revision: 4),
+        ]))
+        #expect(merged.steps.map(\.id) == ["a", "b", "c"])
+        #expect(merged.steps.map(\.state) == [.succeeded, .succeeded, .succeeded])
+        #expect(merged.revision == 5)
+        #expect(!merged.running)
+
+        let unchanged = page.merging(StepPage(runID: "r1", running: true, revision: 3, steps: []))
+        #expect(unchanged.steps.map(\.id) == ["a", "b"])
+        #expect(unchanged.revision == 3)
+
+        let nextRun = page.merging(StepPage(runID: "r2", running: true, revision: 6, steps: [step("x", .running, seq: 1, revision: 6, run: "r2")]))
+        #expect(nextRun.runID == "r2")
+        #expect(nextRun.steps.map(\.id) == ["x"])
+    }
+
     @Test func aSessionThatNeverRanHasAnEmptyPage() throws {
         let page = try decode(StepPage.self, #"{"run_id":null,"running":false,"started_at":null,"finished_at":null,"revision":0,"steps":[],"omitted_steps":0}"#)
         #expect(page.runID == nil)

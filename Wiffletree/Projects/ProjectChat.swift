@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 import WiffletreeKit
 
 /// A row of the conversation: the human's message, the coordinator's reply, or one burst of
@@ -36,8 +37,16 @@ enum ChatEntry: Identifiable {
     }
 }
 
+/// A photo in the composer and how much of it the host holds.
+struct ComposerPhoto: Identifiable {
+    var upload: Upload
+    let thumbnail: UIImage
+
+    var id: String { upload.id }
+}
+
 /// A project's conversation with its coordinator: the latest page of messages, the running
-/// turn's narration, and sending. `run()` keeps both current from the host's events.
+/// turn's narration, and sending, with photos. `run()` keeps both current from the host's events.
 @MainActor
 @Observable
 final class ProjectChat {
@@ -45,12 +54,24 @@ final class ProjectChat {
     private(set) var messages: [Message] = []
     /// The coordinator's latest run; its narration shows while it runs.
     private(set) var turn: StepPage?
-    /// Why the last load or send failed, until one succeeds.
+    /// Why the last load failed, until one succeeds.
     private(set) var failure: String?
+    /// Why the last send failed, until a send succeeds; sending again retries it.
+    private(set) var sendFailure: String?
     private(set) var isSending = false
     var draft = ""
+    /// Photos to send with the draft, in the order chosen.
+    private(set) var photos: [ComposerPhoto] = []
+    /// Sent attachments' thumbnails by path, as far as they have loaded.
+    private(set) var thumbnails: [String: UIImage] = [:]
+    /// Sent attachments whose image could not be read, shown by name instead.
+    private(set) var unreadable: Set<String> = []
 
     @ObservationIgnored private let host: LiveHost
+    /// Names photos uniquely within a message, which the host requires.
+    @ObservationIgnored private var photosNamed = 0
+    /// The message's id, kept across retries so the host stores it once.
+    @ObservationIgnored private var messageID = UUID().uuidString
 
     init(host: LiveHost, projectID: String) {
         self.host = host
@@ -68,7 +89,32 @@ final class ProjectChat {
     }
 
     var canSend: Bool {
-        !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isSending && coordinator != nil
+        (!body.isEmpty || !photos.isEmpty) && !isSending && coordinator != nil
+    }
+
+    /// Whether the host takes photos from this iPhone: it offers uploads and lets it make changes.
+    var canAttach: Bool {
+        host.capabilities.contains("uploads") && host.level == .control
+    }
+
+    /// How much of the photos the host holds while sending them, from 0 to 1.
+    var uploadProgress: Double? {
+        guard isSending, !photos.isEmpty else { return nil }
+        let total = photos.reduce(0) { $0 + $1.upload.data.count }
+        let stored = photos.reduce(0) { $0 + $1.upload.stored }
+        return total == 0 ? 1 : Double(stored) / Double(total)
+    }
+
+    private var body: String { draft.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    func attach(_ photo: Photo) {
+        photosNamed += 1
+        photos.append(ComposerPhoto(upload: Upload(name: "Photo \(photosNamed).jpg", data: photo.jpeg), thumbnail: photo.thumbnail))
+    }
+
+    func remove(_ photoID: String) {
+        guard !isSending else { return }
+        photos.removeAll { $0.id == photoID }
     }
 
     /// Loads the conversation, then follows the host's events until the task is cancelled.
@@ -89,21 +135,58 @@ final class ProjectChat {
         }
     }
 
-    /// Sends the draft to the coordinator. The message shows as soon as the host stores it; the
-    /// reply follows with the turn it starts.
+    /// Uploads the photos the host does not hold yet, then sends the draft naming them. The
+    /// message shows as soon as the host stores it; the reply follows with the turn it starts.
+    /// After a failure, sending again resumes where it stopped.
     func send() async {
         guard canSend, let coordinator else { return }
-        let command = SendCommand(recipient: coordinator.id, body: draft.trimmingCharacters(in: .whitespacesAndNewlines))
         isSending = true
         defer { isSending = false }
+        sendFailure = nil
+        let uploader = Uploader(connection: host.connection)
+        for photo in photos where !photo.upload.isComplete {
+            do {
+                let uploaded = try await uploader.send(photo.upload) { @MainActor upload in self.update(upload) }
+                update(uploaded)
+            } catch {
+                sendFailure = "Couldn't upload \(photo.upload.name): \(error.localizedDescription)"
+                return
+            }
+        }
+        let command = SendCommand(id: messageID, recipient: coordinator.id, body: body, uploads: photos.map(\.upload.id))
         do {
             let sent = try await host.connection.request(command)
+            for (photo, attachment) in zip(photos, sent.attachments) { thumbnails[attachment.path] = photo.thumbnail }
             draft = ""
-            failure = nil
+            photos = []
+            photosNamed = 0
+            messageID = UUID().uuidString
             if !messages.contains(where: { $0.id == sent.id }) { messages.append(sent) }
         } catch {
-            failure = error.localizedDescription
+            sendFailure = error.localizedDescription
         }
+    }
+
+    /// Fetches a sent image attachment's thumbnail once, from a host that serves files.
+    func loadThumbnail(of attachment: Attachment) async {
+        let path = attachment.path
+        guard thumbnails[path] == nil, !unreadable.contains(path) else { return }
+        guard host.capabilities.contains("files"),
+              let contents = try? await host.connection.request(ReadFileCommand(path: path, maxBytes: Self.thumbnailSourceLimit)),
+              let image = contents.bytes.flatMap(Photo.thumbnail(of:))
+        else {
+            unreadable.insert(path)
+            return
+        }
+        thumbnails[path] = image
+    }
+
+    /// The largest image the conversation fetches to show.
+    private static let thumbnailSourceLimit = 10 * 1024 * 1024
+
+    private func update(_ upload: Upload) {
+        guard let index = photos.firstIndex(where: { $0.id == upload.id }) else { return }
+        photos[index].upload = upload
     }
 
     /// The latest messages and the whole latest turn: on opening, and after events were lost.

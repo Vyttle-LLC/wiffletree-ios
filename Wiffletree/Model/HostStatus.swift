@@ -31,7 +31,7 @@ struct HostStatus: Equatable {
             return
         }
         switch state {
-        case .connected(let address, _):
+        case .connected(let address, _, _):
             let network = address.network
             self.init(.connected, network.route, systemImage: network.systemImage, tone: network == .local ? .green : .cyan)
         case .connecting where lastFailure == nil:

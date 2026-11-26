@@ -3,8 +3,8 @@ import Synchronization
 
 /// The host built into the app, so App Review and new users can explore it without a Mac: the
 /// seed's workspace in memory, with no network. It answers the first screens' commands as a host
-/// does, coordinators reply to messages after a short pause, and every change arrives as an
-/// event. Anything else is refused as not available in the demo.
+/// does, keeps uploaded photos in memory, coordinators reply to messages after a short pause, and
+/// every change arrives as an event. Anything else is refused as not available in the demo.
 public final class DemoHostConnection: HostConnection {
     public struct Options: Sendable {
         /// How long an agent takes to reply.
@@ -21,6 +21,8 @@ public final class DemoHostConnection: HostConnection {
     /// Where the demo says it is: nowhere on the network.
     public static let address = HostAddress(host: "demo.invalid")
     public static let notAvailable = ConnectionError.commandFailed("Not available in the demo.")
+    /// The optional commands the demo answers.
+    public static let capabilities: Set<String> = ["events", "files", "uploads"]
 
     public let events: AsyncStream<HostEvent>
     public let states: AsyncStream<ConnectionState>
@@ -43,6 +45,10 @@ public final class DemoHostConnection: HostConnection {
         /// Counts step changes across sessions, as a host's per-session revisions grow.
         var stepRevision: UInt64 = 0
         var cannedRepliesSent = 0
+        /// Uploads by id, until a message names them.
+        var uploads: [String: (name: String, data: Data)] = [:]
+        /// Sent messages' attachments by path, as `read_file` serves them.
+        var files: [String: Data] = [:]
         var isClosed = false
     }
 
@@ -53,7 +59,7 @@ public final class DemoHostConnection: HostConnection {
         (states, stateSink) = AsyncStream.makeStream()
         shared = Mutex(Shared(workspace: DemoSeed.workspace(at: options.now()), subscribers: [UUID(): eventSink]))
         stateSink.yield(.connecting)
-        stateSink.yield(.connected(address: Self.address, level: .control))
+        stateSink.yield(.connected(address: Self.address, level: .control, capabilities: Self.capabilities))
     }
 
     /// Another subscription, as `subscribe` gives one: the events after `cursor` when this demo
@@ -124,6 +130,10 @@ public final class DemoHostConnection: HostConnection {
                 return try resolve(command.id, answer: command.answer, in: &shared)
             case let command as DismissAttentionCommand:
                 return try dismiss(command.id, in: &shared)
+            case let command as UploadAttachmentCommand:
+                return try upload(command, in: &shared)
+            case let command as ReadFileCommand:
+                return try readFile(command, in: shared)
             case let command as UsageCommand:
                 return usage(command, in: workspace)
             case is QuotasCommand:
@@ -157,7 +167,8 @@ public final class DemoHostConnection: HostConnection {
     private func send(_ command: SendCommand, in shared: inout Shared) throws(ConnectionError) -> Message {
         if let sent = shared.workspace.messages.first(where: { $0.id == command.id }) { return sent }
         let recipient = try session(command.recipient, in: shared.workspace)
-        let message = append(id: command.id, from: nil, to: recipient, body: command.body, in: &shared)
+        let attachments = try attach(command.uploads, to: command.id, in: &shared)
+        let message = append(id: command.id, from: nil, to: recipient, body: command.body, attachments: attachments, in: &shared)
         setStatus(.working, of: recipient.id, in: &shared)
         let run = startRun(of: recipient.id, in: &shared)
         emit([.state, .steps(sessions: [recipient.id])], in: &shared)
@@ -165,6 +176,44 @@ public final class DemoHostConnection: HostConnection {
         shared.cannedRepliesSent += 1
         scheduleReply(from: recipient.id, run: run, body: reply, in: &shared)
         return message
+    }
+
+    /// Keeps a piece where the upload ends, as the host does, and answers how much it holds.
+    private func upload(_ command: UploadAttachmentCommand, in shared: inout Shared) throws(ConnectionError) -> Uploaded {
+        guard let piece = Data(base64Encoded: command.bytes) else { throw .commandFailed("The piece is not base64") }
+        guard piece.count <= Upload.pieceLimit else { throw .commandFailed("A piece is at most 128 KiB") }
+        var upload = shared.uploads[command.uploadID] ?? (command.name, Data())
+        guard shared.uploads[command.uploadID] != nil || command.offset == 0 else {
+            throw .commandFailed("No upload has that id; start it at offset 0")
+        }
+        guard upload.name == command.name else { throw .commandFailed("That upload has another file name") }
+        if command.offset == upload.data.count {
+            guard upload.data.count + piece.count <= Upload.sizeLimit else { throw .commandFailed("\(command.name) is over 50 MB") }
+            upload.data.append(piece)
+        }
+        shared.uploads[command.uploadID] = upload
+        return Uploaded(uploadID: command.uploadID, stored: upload.data.count)
+    }
+
+    /// Moves the named uploads into the message's attachments.
+    private func attach(_ ids: [String], to messageID: String, in shared: inout Shared) throws(ConnectionError) -> [Attachment] {
+        var attachments: [Attachment] = []
+        for id in ids {
+            guard let upload = shared.uploads[id] else { throw .commandFailed("No upload has that id") }
+            let path = "demo/attachments/\(messageID)/\(upload.name)"
+            let isJPEG = upload.data.starts(with: [0xFF, 0xD8, 0xFF])
+            attachments.append(Attachment(path: path, size: UInt64(upload.data.count), image: isJPEG ? "jpeg" : nil))
+        }
+        for (id, attachment) in zip(ids, attachments) {
+            shared.files[attachment.path] = shared.uploads.removeValue(forKey: id)?.data
+        }
+        return attachments
+    }
+
+    private func readFile(_ command: ReadFileCommand, in shared: Shared) throws(ConnectionError) -> FileContents {
+        guard let data = shared.files[command.path] else { throw Self.notAvailable }
+        guard data.count <= command.maxBytes else { throw .commandFailed("The file is larger than \(command.maxBytes) bytes") }
+        return FileContents(path: command.path, data: data.base64EncodedString())
     }
 
     /// Answers an Inbox item once, as the host does: an approval takes `approved`, and anything
@@ -271,7 +320,9 @@ public final class DemoHostConnection: HostConnection {
     }
 
     @discardableResult
-    private func append(id: String, from sender: String?, to recipient: Session, body: String, in shared: inout Shared) -> Message {
+    private func append(
+        id: String, from sender: String?, to recipient: Session, body: String, attachments: [Attachment] = [], in shared: inout Shared
+    ) -> Message {
         let message = Message(
             id: id,
             sequence: (shared.workspace.messages.last?.sequence ?? 0) + 1,
@@ -280,7 +331,8 @@ public final class DemoHostConnection: HostConnection {
             recipient: recipient.id,
             body: body,
             receipt: "completed",
-            createdAt: Int64(options.now().timeIntervalSince1970 * 1000)
+            createdAt: Int64(options.now().timeIntervalSince1970 * 1000),
+            attachments: attachments
         )
         shared.workspace.messages.append(message)
         return message

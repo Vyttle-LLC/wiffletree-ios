@@ -50,7 +50,7 @@ targets:
         LSApplicationCategoryType: "public.app-category.developer-tools"
         NSBonjourServices:
           - _wiffletree._tcp
-        NSCameraUsageDescription: "Wiffletree uses the camera to scan the pairing QR code your Mac shows."
+        NSCameraUsageDescription: "Wiffletree uses the camera to scan the pairing QR code your Mac shows, and to take photos you attach to messages."
         NSLocalNetworkUsageDescription: "Wiffletree finds and connects to Wiffletree on your Mac over your local network."
         NSMicrophoneUsageDescription: "Wiffletree uses the microphone when you dictate a reply to your coordinator."
         NSSpeechRecognitionUsageDescription: "Wiffletree turns your dictation into text on this iPhone. Your voice never leaves it."

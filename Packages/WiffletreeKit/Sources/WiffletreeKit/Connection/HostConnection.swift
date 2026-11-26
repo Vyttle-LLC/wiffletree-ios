@@ -24,7 +24,8 @@ extension HostConnection {
 
 public enum ConnectionState: Equatable, Sendable {
     case connecting
-    case connected(address: HostAddress, level: AccessLevel)
+    /// `capabilities` names the optional commands the host offers, such as `uploads`.
+    case connected(address: HostAddress, level: AccessLevel, capabilities: Set<String> = [])
     /// The last try failed or the connection dropped; another try follows after a pause.
     case waiting(attempt: Int, error: ConnectionError)
     /// Stopped for good: the host's key changed, it no longer knows this device, or it is too
@@ -181,11 +182,12 @@ public final class RemoteHostConnection: HostConnection {
         updated.addresses = host.addresses.answered(at: address)
         updated.level = session.level
         if updated != host { try? store.save(updated) }
+        let connected = ConnectionState.connected(address: address, level: session.level, capabilities: Set(session.welcome.capabilities))
         let waiters = shared.withLock { shared -> [CheckedContinuation<HostSession, any Error>]? in
             guard shared.state != .closed else { return nil }
             shared.host = updated
             shared.session = session
-            shared.state = .connected(address: address, level: session.level)
+            shared.state = connected
             defer { shared.waiters = [] }
             return shared.waiters
         }
@@ -193,7 +195,7 @@ public final class RemoteHostConnection: HostConnection {
             await session.close()
             throw .closed
         }
-        stateSink.yield(.connected(address: address, level: session.level))
+        stateSink.yield(connected)
         for waiter in waiters { waiter.resume(returning: session) }
         return session
     }

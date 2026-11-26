@@ -70,7 +70,12 @@ final class LiveHost: Identifiable {
 
     /// What the host lets this iPhone do: as the live connection says, else as last stored.
     var level: AccessLevel {
-        if case .connected(_, let level) = state { level } else { paired?.level ?? .control }
+        if case .connected(_, let level, _) = state { level } else { paired?.level ?? .control }
+    }
+
+    /// The optional commands the live connection offers, such as `uploads`; none while it is down.
+    var capabilities: Set<String> {
+        if case .connected(_, _, let capabilities) = state { capabilities } else { [] }
     }
 
     /// Open Inbox items: what the host's badges count.

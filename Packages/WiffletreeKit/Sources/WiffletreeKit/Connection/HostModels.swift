@@ -203,10 +203,57 @@ public struct Message: Decodable, Identifiable, Sendable {
     public let receipt: String
     /// Milliseconds since the epoch.
     public let createdAt: Int64
+    /// Only the human's messages carry attachments.
+    public let attachments: [Attachment]
+
+    init(
+        id: String, sequence: Int64, projectID: String, sender: String?, recipient: String, body: String,
+        receipt: String, createdAt: Int64, attachments: [Attachment] = []
+    ) {
+        self.id = id
+        self.sequence = sequence
+        self.projectID = projectID
+        self.sender = sender
+        self.recipient = recipient
+        self.body = body
+        self.receipt = receipt
+        self.createdAt = createdAt
+        self.attachments = attachments
+    }
 
     private enum CodingKeys: String, CodingKey {
-        case id, sequence, projectID = "projectId", sender, recipient, body, receipt, createdAt
+        case id, sequence, projectID = "projectId", sender, recipient, body, receipt, createdAt, attachments
     }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        sequence = try container.decode(Int64.self, forKey: .sequence)
+        projectID = try container.decode(String.self, forKey: .projectID)
+        sender = try container.decodeIfPresent(String.self, forKey: .sender)
+        recipient = try container.decode(String.self, forKey: .recipient)
+        body = try container.decode(String.self, forKey: .body)
+        receipt = try container.decode(String.self, forKey: .receipt)
+        createdAt = try container.decode(Int64.self, forKey: .createdAt)
+        attachments = try container.decodeIfPresent([Attachment].self, forKey: .attachments) ?? []
+    }
+}
+
+/// A file on a sent message: the host's read-only copy, which `ReadFileCommand` fetches.
+public struct Attachment: Decodable, Equatable, Sendable {
+    /// The copy's path on the host.
+    public let path: String
+    public let size: UInt64
+    /// The image format, such as `jpeg`, when the file is an image the host recognised.
+    public let image: String?
+
+    public init(path: String, size: UInt64, image: String?) {
+        self.path = path
+        self.size = size
+        self.image = image
+    }
+
+    public var name: String { (path as NSString).lastPathComponent }
 }
 
 /// An Inbox item: an agent's question, or an approval such as publishing a pull request.
@@ -552,4 +599,33 @@ public struct QuotaWindow: Decodable, Sendable {
     public let resetsAt: Int64?
 
     private enum CodingKeys: String, CodingKey { case key, label, usedPercent, observedAt, durationMinutes = "durationMins", resetsAt }
+}
+
+/// `upload_attachment`'s reply: how many bytes of the upload the host holds, where the next
+/// piece starts.
+public struct Uploaded: Decodable, Equatable, Sendable {
+    public let uploadID: String
+    public let stored: Int
+
+    public init(uploadID: String, stored: Int) {
+        self.uploadID = uploadID
+        self.stored = stored
+    }
+
+    private enum CodingKeys: String, CodingKey { case uploadID = "uploadId", stored }
+}
+
+/// `read_file`'s reply.
+public struct FileContents: Decodable, Sendable {
+    /// The path once the host resolved it.
+    public let path: String
+    /// The file's bytes, base64.
+    public let data: String
+
+    public init(path: String, data: String) {
+        self.path = path
+        self.data = data
+    }
+
+    public var bytes: Data? { Data(base64Encoded: data) }
 }

@@ -35,11 +35,60 @@ public struct SendCommand: HostCommand {
     public let id: String
     public let recipient: String
     public let body: String
+    /// The ids of finished uploads to attach; a host without the `uploads` capability never
+    /// sees the field.
+    public let uploads: [String]
 
-    public init(id: String = UUID().uuidString, recipient: String, body: String) {
+    public init(id: String = UUID().uuidString, recipient: String, body: String, uploads: [String] = []) {
         self.id = id
         self.recipient = recipient
         self.body = body
+        self.uploads = uploads
+    }
+
+    private enum CodingKeys: String, CodingKey { case id, recipient, body, uploads }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(recipient, forKey: .recipient)
+        try container.encode(body, forKey: .body)
+        if !uploads.isEmpty { try container.encode(uploads, forKey: .uploads) }
+    }
+}
+
+/// One piece of a file the device attaches, at most `Upload.pieceLimit` bytes. The host keeps a
+/// piece only where the upload ends, so one sent again changes nothing. Needs `uploads`.
+public struct UploadAttachmentCommand: HostCommand, Equatable {
+    public typealias Reply = Uploaded
+    public static let type = "upload_attachment"
+    public let uploadID: String
+    public let name: String
+    public let offset: Int
+    /// The piece, base64.
+    public let bytes: String
+
+    public init(uploadID: String, name: String, offset: Int, bytes: String) {
+        self.uploadID = uploadID
+        self.name = name
+        self.offset = offset
+        self.bytes = bytes
+    }
+
+    private enum CodingKeys: String, CodingKey { case uploadID = "uploadId", name, offset, bytes }
+}
+
+/// A file under the host's roots, such as a sent message's attachment, refused when larger than
+/// `maxBytes`. Needs `files`.
+public struct ReadFileCommand: HostCommand {
+    public typealias Reply = FileContents
+    public static let type = "read_file"
+    public let path: String
+    public let maxBytes: Int
+
+    public init(path: String, maxBytes: Int) {
+        self.path = path
+        self.maxBytes = maxBytes
     }
 }
 

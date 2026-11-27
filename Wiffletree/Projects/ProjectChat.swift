@@ -17,6 +17,13 @@ enum ChatEntry: Identifiable {
         }
     }
 
+    var messages: [Message] {
+        switch self {
+        case .human(let message), .reply(let message): [message]
+        case .activity(let messages): messages
+        }
+    }
+
     /// The conversation's messages in order, each unbroken run of agent messages and notices
     /// folded into one entry.
     static func fold(_ messages: [Message]) -> [ChatEntry] {
@@ -45,16 +52,25 @@ struct ComposerPhoto: Identifiable {
     var id: String { upload.id }
 }
 
-/// A project's conversation with its coordinator: the latest page of messages, the running
-/// turn's narration, and sending, with photos. `run()` keeps both current from the host's events.
+/// A project's conversation with its coordinator: the messages loaded so far, the running turn's
+/// narration, and sending, with photos. `run()` keeps both current from the host's events; the
+/// newest page merges into what is loaded, and earlier pages load on request.
 @MainActor
 @Observable
 final class ProjectChat {
     let projectID: String
+    /// Oldest first: the newest page and any earlier pages loaded since.
     private(set) var messages: [Message] = []
+    /// Whether the host may hold messages older than the loaded ones.
+    private(set) var hasEarlier = false
+    private(set) var isLoadingEarlier = false
+    /// Whether the last "Load earlier" failed; the row offers it again.
+    private(set) var earlierFailed = false
     /// The coordinator's latest run; its narration shows while it runs.
     private(set) var turn: StepPage?
-    /// Why the last load failed, until one succeeds.
+    /// Whether the newest messages have loaded once; until then the chat shows it is loading.
+    private(set) var hasLoaded = false
+    /// Why the newest messages did not load, until they do.
     private(set) var failure: String?
     /// Why the last send failed, until a send succeeds; sending again retries it.
     private(set) var sendFailure: String?
@@ -70,20 +86,30 @@ final class ProjectChat {
     private(set) var unreadable: Set<String> = []
 
     @ObservationIgnored private let host: LiveHost
+    /// How many messages one read asks for.
+    @ObservationIgnored private let pageSize: Int
     /// Names photos uniquely within a message, which the host requires.
     @ObservationIgnored private var photosNamed = 0
     /// The last send that failed. Retrying the same message reuses its id, so the host stores it
     /// once; a changed message gets a new id, which the host requires.
     @ObservationIgnored private var unsent: SendCommand?
+    /// The newest sequence the last newest page held. A sent message shows before any page holds
+    /// it, so it never counts towards whether a page reaches back to the loaded history.
+    @ObservationIgnored private var newestPaged: Int64?
 
-    init(host: LiveHost, projectID: String) {
+    /// - Parameter pageSize: The host's largest page by default, as the desktop reads.
+    init(host: LiveHost, projectID: String, pageSize: Int = 100) {
         self.host = host
         self.projectID = projectID
+        self.pageSize = pageSize
     }
 
     var overview: ProjectOverview? { host.snapshot?.overview(of: projectID) }
     var coordinator: Session? { overview?.coordinator }
     var entries: [ChatEntry] { ChatEntry.fold(messages) }
+
+    /// Nothing has loaded and the host is not connected, so the chat waits for it.
+    var isWaitingForHost: Bool { !hasLoaded && !host.isConnected }
 
     /// What the coordinator has said so far in a turn that is still running.
     var liveNarration: [Step] {
@@ -204,35 +230,65 @@ final class ProjectChat {
         photos[index].upload = upload
     }
 
-    /// The latest messages and the whole latest turn: on opening, and after events were lost.
-    private func reloadAll() async {
-        await load { coordinator in
-            messages = try await host.connection.request(MessagesCommand(sessionID: coordinator))
-            turn = try await host.connection.request(StepsCommand(sessionID: coordinator))
+    /// The page of messages before the oldest loaded one, added above it.
+    func loadEarlier() async {
+        guard hasEarlier, !isLoadingEarlier, let oldest = messages.first else { return }
+        guard let coordinator else { return }
+        isLoadingEarlier = true
+        defer { isLoadingEarlier = false }
+        do {
+            let page = try await host.connection.request(MessagesCommand(sessionID: coordinator.id, before: oldest.sequence, limit: pageSize))
+            earlierFailed = false
+            // A newest page that landed meanwhile may have replaced what this page continues.
+            guard messages.first?.id == oldest.id else { return }
+            messages = page + messages
+            hasEarlier = page.count == pageSize
+        } catch {
+            earlierFailed = true
         }
     }
 
+    /// The newest messages and the whole latest turn: on opening, after events were lost, and
+    /// when the person retries a failed load.
+    func reloadAll() async {
+        await reloadMessages()
+        guard let coordinator else { return }
+        if let latest = try? await host.connection.request(StepsCommand(sessionID: coordinator.id)) { turn = latest }
+    }
+
+    /// The newest page, merged into what is loaded. Only this read sets or clears `failure`; a
+    /// failure while the host is disconnected is the connection's, which the host header shows.
     private func reloadMessages() async {
-        await load { coordinator in
-            messages = try await host.connection.request(MessagesCommand(sessionID: coordinator))
-        }
-    }
-
-    /// Only the steps changed since the turn last read, merged into it.
-    private func refreshTurn() async {
-        await load { coordinator in
-            let newer = try await host.connection.request(StepsCommand(sessionID: coordinator, after: turn?.revision ?? 0))
-            turn = turn.map { $0.merging(newer) } ?? newer
-        }
-    }
-
-    private func load(_ fetch: (_ coordinator: String) async throws -> Void) async {
         guard let coordinator else { return }
         do {
-            try await fetch(coordinator.id)
+            mergeNewest(try await host.connection.request(MessagesCommand(sessionID: coordinator.id, limit: pageSize)))
+            hasLoaded = true
             failure = nil
         } catch {
-            failure = error.localizedDescription
+            if host.isConnected { failure = error.localizedDescription }
         }
+    }
+
+    /// Takes the newest page as the truth from its oldest message on, keeping the loaded messages
+    /// before it and whether earlier ones remain. Otherwise the page starts the history again:
+    /// short of full it holds the whole conversation; full, it does not reach back to what pages
+    /// held, so "Load earlier" fills the gap.
+    private func mergeNewest(_ page: [Message]) {
+        if let first = page.first, page.count == pageSize, let newestPaged, newestPaged >= first.sequence {
+            messages = messages.filter { $0.sequence < first.sequence } + page
+        } else {
+            messages = page
+            hasEarlier = page.count == pageSize
+        }
+        newestPaged = page.last?.sequence
+    }
+
+    /// Only the steps changed since the turn last read, merged into it. A failed read waits for
+    /// the next steps event, leaving the turn as it was.
+    private func refreshTurn() async {
+        guard let coordinator,
+              let newer = try? await host.connection.request(StepsCommand(sessionID: coordinator.id, after: turn?.revision ?? 0))
+        else { return }
+        turn = turn.map { $0.merging(newer) } ?? newer
     }
 }

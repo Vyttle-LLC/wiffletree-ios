@@ -32,8 +32,7 @@ private struct TicketContent: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(ticket.title).font(.title2.bold()).foregroundStyle(Tidal.text)
                     HStack(spacing: 6) {
-                        let state = ticket.stateLabel
-                        Chip(state.text, tone: state.tone)
+                        Chip(ticket.statusWord, tone: ticket.statusRole.tone)
                         if let repository = snapshot.repositories.first(where: { $0.id == ticket.repositoryID }) {
                             Chip(repository.name, tone: .subtle)
                         }
@@ -51,7 +50,7 @@ private struct TicketContent: View {
                 }
             }
             if let pullRequest = ticket.pullRequest {
-                PullRequestSection(pullRequest: pullRequest, waitsInInbox: snapshot.mergeWaitsInInbox(ticket))
+                PullRequestSection(pullRequest: pullRequest, label: ticket.pullRequestLabel, waitsInInbox: snapshot.mergeWaitsInInbox(ticket))
             }
             ReviewSections(ticket: ticket)
             AgentsSection(ticket: ticket, snapshot: snapshot)
@@ -64,13 +63,15 @@ private struct PullRequestSection: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.showSection) private var showSection
     let pullRequest: PullRequest
+    /// Such as "#212 open", as the tickets sheet reads it.
+    let label: String
     let waitsInInbox: Bool
 
     var body: some View {
         Section {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Text("#\(pullRequest.number) · \(state)").font(.headline)
+                    Text(label).font(.headline)
                     Spacer()
                     if waitsInInbox { Chip("Waiting for you", systemImage: "exclamationmark.circle", tone: .yellow) }
                 }
@@ -96,16 +97,6 @@ private struct PullRequestSection: View {
 
     private func openOnGitHub() {
         if let url = URL(string: pullRequest.url) { openURL(url) }
-    }
-
-    private var state: String {
-        if pullRequest.draft && pullRequest.state == .open { return "Draft" }
-        return switch pullRequest.state {
-        case .open: "Open"
-        case .merged: "Merged"
-        case .closed: "Closed"
-        default: pullRequest.state.rawValue.uppercasedFirst
-        }
     }
 
     private var checks: String {

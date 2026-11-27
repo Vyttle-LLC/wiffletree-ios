@@ -3,7 +3,7 @@ import SwiftUI
 /// A status colour with its tint. Status is never colour alone: every use pairs it with a glyph
 /// and words.
 public enum Tone: Sendable {
-    case accent, green, cyan, yellow, red, subtle
+    case accent, green, cyan, yellow, red, focus, subtle
 
     public var color: Color {
         switch self {
@@ -12,6 +12,7 @@ public enum Tone: Sendable {
         case .cyan: Tidal.cyan
         case .yellow: Tidal.yellow
         case .red: Tidal.red
+        case .focus: Tidal.focus
         case .subtle: Tidal.subtle
         }
     }
@@ -23,6 +24,7 @@ public enum Tone: Sendable {
         case .cyan: Tidal.tintCyan
         case .yellow: Tidal.tintYellow
         case .red: Tidal.tintRed
+        case .focus: Tidal.tintFocus
         case .subtle: Tidal.overlay
         }
     }

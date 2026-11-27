@@ -46,12 +46,6 @@ struct ProjectOverview: Identifiable {
         if accepted == tickets.count { return "\(phase) · every ticket accepted" }
         return "\(phase) · \(accepted) of \(tickets.count) tickets accepted"
     }
-
-    /// The ticket moving now, as the pinned card's last line names it: under review first, then
-    /// being implemented.
-    var activeTicket: Ticket? {
-        tickets.first { $0.state == .verifying } ?? tickets.first { Self.implementing.contains($0.state) }
-    }
 }
 
 extension Snapshot {
@@ -132,34 +126,15 @@ extension Attention.Approval {
     }
 }
 
-extension Ticket {
-    /// The ticket's state in words with its tone, such as "Verifying · round 2".
-    var stateLabel: (text: String, tone: Tone) {
-        switch state {
-        case .planned: ("Planned", .subtle)
-        case .assigned: ("Assigned", .cyan)
-        case .readyForTesting: ("Ready for testing", .cyan)
-        case .verifying: (verification?.rounds.last.map { "Verifying · round \($0.round)" } ?? "Verifying", .yellow)
-        case .passed: ("Passed", .green)
-        case .failed: ("Failed", .red)
-        case .blocked: ("Blocked", .red)
-        case .completed: ("Completed", .green)
-        case .accepted: ("Accepted", .green)
-        case .closed: ("Closed", .subtle)
-        default: (state.rawValue.replacing("_", with: " ").uppercasedFirst, .subtle)
+extension Ticket.StatusRole {
+    /// The Tidal tone of the desktop's colour role.
+    var tone: Tone {
+        switch self {
+        case .subtle: .subtle
+        case .focus: .focus
+        case .green: .green
+        case .red: .red
         }
-    }
-
-    /// The short chip of the pinned ticket list, such as "Verifying · 2".
-    var shortStateLabel: (text: String, tone: Tone) {
-        guard state == .verifying, let round = verification?.rounds.last?.round else { return stateLabel }
-        return ("Verifying · \(round)", .yellow)
-    }
-
-    /// The pinned card's line for the ticket moving now, such as "Add the alert: verifying · round 2".
-    var progressLine: String {
-        let words = state == .assigned ? "implementing" : stateLabel.text.lowercasedFirst
-        return "\(title): \(words)"
     }
 }
 

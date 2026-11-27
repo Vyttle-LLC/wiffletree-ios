@@ -44,14 +44,17 @@ private struct ChatContent: View {
     @Environment(LiveHost.self) private var host
     @Bindable var chat: ProjectChat
     @Binding var isShowingAgents: Bool
+    @State private var isShowingTickets = false
 
     var body: some View {
         VStack(spacing: 0) {
             ConnectionBanner(host: host)
-            if let overview = chat.overview, !overview.tickets.isEmpty {
-                PinnedTickets(overview: overview)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
+            if let coordinator = chat.coordinator, let table = host.snapshot?.ticketTable(of: coordinator.id), !table.isEmpty {
+                PinnedTicketsLine(table: table) { isShowingTickets = true }
+                    .padding(.horizontal, 12)
+                    .padding(.top, 8)
+                    .padding(.bottom, 6)
+                    .sheet(isPresented: $isShowingTickets) { TicketsSheet(coordinatorID: coordinator.id) }
             }
             ScrollViewReader { proxy in
                 ScrollView {
@@ -331,53 +334,6 @@ private struct ActivityLine: View {
         for name in agents.map(names) where !senders.contains(name) { senders.append(name) }
         let line = counts.joined(separator: ", ")
         return senders.isEmpty ? line : "\(line) · \(senders.joined(separator: ", "))"
-    }
-}
-
-/// Ticket status pinned above the conversation, as on the desktop; it expands to every ticket.
-private struct PinnedTickets: View {
-    let overview: ProjectOverview
-    @State private var isExpanded = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Button { withAnimation(.snappy) { isExpanded.toggle() } } label: {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text(overview.phase).font(.subheadline.weight(.semibold)).foregroundStyle(Tidal.text)
-                        Spacer()
-                        Text("\(overview.accepted) of \(overview.tickets.count) accepted")
-                            .font(.footnote)
-                            .foregroundStyle(Tidal.subtle)
-                        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Tidal.muted)
-                    }
-                    TicketProgressBar(overview: overview)
-                    if !isExpanded, let active = overview.activeTicket {
-                        Text(active.progressLine).font(.footnote).foregroundStyle(Tidal.subtle).lineLimit(1)
-                    }
-                }
-                .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint(isExpanded ? "Hides the tickets" : "Lists the tickets")
-            if isExpanded {
-                ForEach(overview.tickets) { ticket in
-                    NavigationLink(value: ProjectRoute.ticket(id: ticket.id)) {
-                        HStack {
-                            Text(ticket.title).font(.subheadline).foregroundStyle(Tidal.text).lineLimit(1)
-                            Spacer()
-                            let label = ticket.shortStateLabel
-                            Chip(label.text, tone: label.tone)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-        .padding(12)
-        .background(Tidal.surface, in: .rect(cornerRadius: 14))
     }
 }
 

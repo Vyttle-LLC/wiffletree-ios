@@ -45,6 +45,7 @@ private struct ChatContent: View {
     @Bindable var chat: ProjectChat
     @Binding var isShowingAgents: Bool
     @State private var isShowingTickets = false
+    @State private var openedFile: OpenedFile?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -80,13 +81,21 @@ private struct ChatContent: View {
                             EntryView(chat: chat, entry: entry, coordinatorName: chat.overview?.project.name ?? "Coordinator")
                         }
                         ForEach(chat.liveNarration) { step in
-                            CoordinatorWords(name: chat.overview?.project.name ?? "Coordinator", time: nil, markdown: step.text)
+                            CoordinatorWords(name: chat.overview?.project.name ?? "Coordinator", time: nil) {
+                                MarkdownText(source: step.text)
+                            }
                         }
                         Color.clear.frame(height: 1).id(bottom)
                     }
                     .padding(16)
                 }
                 .defaultScrollAnchor(.bottom)
+                .environment(\.openURL, OpenURLAction { url in
+                    guard let path = FileLinks.path(of: url) else { return .systemAction }
+                    openedFile = OpenedFile(path: path)
+                    return .handled
+                })
+                .sheet(item: $openedFile) { FileViewer(chat: chat, file: $0) }
                 .onChange(of: chat.messages.last?.id) { proxy.scrollTo(bottom) }
                 .onChange(of: chat.liveNarration.last?.text) { proxy.scrollTo(bottom) }
             }
@@ -111,7 +120,9 @@ private struct EntryView: View {
     var body: some View {
         switch entry {
         case .reply(let message):
-            CoordinatorWords(name: coordinatorName, time: message.date, markdown: message.body)
+            CoordinatorWords(name: coordinatorName, time: message.date) {
+                LinkedMarkdown(chat: chat, message: message)
+            }
         case .human(let message):
             VStack(alignment: .trailing, spacing: 6) {
                 if !message.attachments.isEmpty {
@@ -129,7 +140,7 @@ private struct EntryView: View {
             .frame(maxWidth: 300, alignment: .trailing)
             .frame(maxWidth: .infinity, alignment: .trailing)
         case .activity(let messages):
-            ActivityLine(messages: messages, names: names)
+            ActivityLine(chat: chat, messages: messages, names: names)
         }
     }
 
@@ -221,8 +232,8 @@ private struct SentAttachments: View {
             if !images.isEmpty {
                 HStack(spacing: 6) {
                     ForEach(images, id: \.path) { attachment in
-                        SentThumbnail(image: chat.thumbnails[attachment.path], name: attachment.name)
-                            .task { await chat.loadThumbnail(of: attachment) }
+                        Thumbnail(image: chat.thumbnails[attachment.path], name: attachment.name, side: 96)
+                            .task { await chat.loadThumbnail(of: attachment.path) }
                     }
                 }
             }
@@ -236,32 +247,32 @@ private struct SentAttachments: View {
     }
 }
 
-private struct SentThumbnail: View {
-    let image: UIImage?
-    let name: String
+/// A message's Markdown with the files it names linked once the host has said which are files,
+/// and thumbnails of the images among them.
+private struct LinkedMarkdown: View {
+    @Environment(LiveHost.self) private var host
+    let chat: ProjectChat
+    let message: Message
 
     var body: some View {
-        Group {
-            if let image {
-                Image(uiImage: image).resizable().scaledToFill()
-            } else {
-                Tidal.overlay.overlay(ProgressView())
+        let files = chat.fileLinks[message.id]
+        VStack(alignment: .leading, spacing: 8) {
+            MarkdownText(source: files?.markdown ?? message.body)
+            if let images = files?.images, !images.isEmpty {
+                LinkedImages(chat: chat, paths: images)
             }
         }
-        .frame(width: 96, height: 96)
-        .clipShape(.rect(cornerRadius: 12))
-        .accessibilityElement()
-        .accessibilityLabel(name)
-        .accessibilityAddTraits(.isImage)
+        // Asked again when the host comes back, if it could not answer before.
+        .task(id: host.isConnected) { await chat.resolveFiles(of: message) }
     }
 }
 
 /// The coordinator's words: a small avatar with its name and time, then full-width Markdown.
-private struct CoordinatorWords: View {
+private struct CoordinatorWords<Words: View>: View {
     let name: String
     /// Nil while the turn still runs.
     let time: Date?
-    let markdown: String
+    @ViewBuilder let words: Words
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -279,7 +290,7 @@ private struct CoordinatorWords: View {
                 }
             }
             .accessibilityElement(children: .combine)
-            MarkdownText(source: markdown)
+            words
                 .foregroundStyle(Tidal.text)
         }
     }
@@ -287,6 +298,7 @@ private struct CoordinatorWords: View {
 
 /// One burst of agent messages and notices, folded to a line that expands to show them.
 private struct ActivityLine: View {
+    let chat: ProjectChat
     let messages: [Message]
     let names: (Message) -> String
     @State private var isExpanded = false
@@ -315,7 +327,7 @@ private struct ActivityLine: View {
                 ForEach(messages) { message in
                     VStack(alignment: .leading, spacing: 2) {
                         Text(names(message)).font(.footnote.weight(.semibold)).foregroundStyle(Tidal.subtle)
-                        MarkdownText(source: message.body).font(.subheadline).foregroundStyle(Tidal.text)
+                        LinkedMarkdown(chat: chat, message: message).font(.subheadline).foregroundStyle(Tidal.text)
                     }
                     .padding(.leading, 12)
                 }

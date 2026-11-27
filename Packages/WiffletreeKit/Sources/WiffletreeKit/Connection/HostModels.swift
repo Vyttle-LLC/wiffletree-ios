@@ -25,12 +25,15 @@ public struct Snapshot: Decodable, Sendable {
     public let attention: [Attention]
     public let tickets: [Ticket]
     public let repositories: [Repository]
+    /// By coordinator, how many tickets it owns, open or not; most settled ones are only in the
+    /// archive. An older host leaves it out.
+    public let ticketsOwned: [String: Int]
 
-    private enum CodingKeys: String, CodingKey { case projects, spaces, sessions, runtimes, attention, tickets, repositories }
+    private enum CodingKeys: String, CodingKey { case projects, spaces, sessions, runtimes, attention, tickets, repositories, ticketsOwned }
 
     public init(
         projects: [Project], spaces: [Space] = [], sessions: [Session], runtimes: [SessionRuntime] = [],
-        attention: [Attention], tickets: [Ticket], repositories: [Repository] = []
+        attention: [Attention], tickets: [Ticket], repositories: [Repository] = [], ticketsOwned: [String: Int] = [:]
     ) {
         self.projects = projects
         self.spaces = spaces
@@ -39,6 +42,7 @@ public struct Snapshot: Decodable, Sendable {
         self.attention = attention
         self.tickets = tickets
         self.repositories = repositories
+        self.ticketsOwned = ticketsOwned
     }
 
     public init(from decoder: any Decoder) throws {
@@ -50,6 +54,7 @@ public struct Snapshot: Decodable, Sendable {
         attention = try container.decode([Attention].self, forKey: .attention)
         tickets = try container.decodeIfPresent([Ticket].self, forKey: .tickets) ?? []
         repositories = try container.decodeIfPresent([Repository].self, forKey: .repositories) ?? []
+        ticketsOwned = try container.decodeIfPresent([String: Int].self, forKey: .ticketsOwned) ?? [:]
     }
 
     /// The projects still open. Archiving a project's coordinator closes the project, and the
@@ -69,7 +74,8 @@ public struct Snapshot: Decodable, Sendable {
         return Snapshot(
             projects: open, spaces: spaces,
             sessions: sessions.filter { openIDs.contains($0.projectID) }, runtimes: runtimes,
-            attention: attention.filter { openIDs.contains($0.projectID) }, tickets: tickets, repositories: repositories
+            attention: attention.filter { openIDs.contains($0.projectID) }, tickets: tickets, repositories: repositories,
+            ticketsOwned: ticketsOwned
         )
     }
 
@@ -340,18 +346,20 @@ public struct Ticket: Decodable, Identifiable, Sendable {
     /// Every finding verifiers recorded, across all cycles.
     public let ledger: [LedgerEntry]
     public internal(set) var pullRequest: PullRequest?
+    /// The publish the coordinator asked for, while its step runs or waits for the human.
+    public internal(set) var publishing: PublishRequest?
     /// The merge the coordinator asked for, while the host carries it out.
     public internal(set) var merging: MergeRequest?
 
     private enum CodingKeys: String, CodingKey {
         case id, coordinatorID = "coordinatorId", repositoryID = "repositoryId", title, brief, branch, state, verification,
-             previousCycles, ledger, pullRequest, merging
+             previousCycles, ledger, pullRequest, publishing, merging
     }
 
     init(
         id: String, coordinatorID: String, repositoryID: String? = nil, title: String, brief: String, branch: String, state: State,
         verification: Verification? = nil, previousCycles: [Verification] = [], ledger: [LedgerEntry] = [],
-        pullRequest: PullRequest? = nil, merging: MergeRequest? = nil
+        pullRequest: PullRequest? = nil, publishing: PublishRequest? = nil, merging: MergeRequest? = nil
     ) {
         self.id = id
         self.coordinatorID = coordinatorID
@@ -364,6 +372,7 @@ public struct Ticket: Decodable, Identifiable, Sendable {
         self.previousCycles = previousCycles
         self.ledger = ledger
         self.pullRequest = pullRequest
+        self.publishing = publishing
         self.merging = merging
     }
 
@@ -380,6 +389,7 @@ public struct Ticket: Decodable, Identifiable, Sendable {
         previousCycles = try container.decodeIfPresent([Verification].self, forKey: .previousCycles) ?? []
         ledger = try container.decodeIfPresent([LedgerEntry].self, forKey: .ledger) ?? []
         pullRequest = try container.decodeIfPresent(PullRequest.self, forKey: .pullRequest)
+        publishing = try container.decodeIfPresent(PublishRequest.self, forKey: .publishing)
         merging = try container.decodeIfPresent(MergeRequest.self, forKey: .merging)
     }
 }
@@ -505,6 +515,12 @@ public struct PullRequest: Decodable, Sendable {
     /// GitHub's merge state, such as `clean`, `behind` or `dirty`.
     public let mergeState: String
     public let checks: Checks
+}
+
+/// A coordinator's `publish_ticket`, while its step runs or waits for the human.
+public struct PublishRequest: Decodable, Sendable {
+    /// The Inbox item the step waits on.
+    public let waiting: String?
 }
 
 /// A coordinator's `merge_ticket`, while the host carries it out.

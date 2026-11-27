@@ -157,7 +157,8 @@ enum DemoSeed {
             branch: "wiffletree/store-alert-thresholds", state: .accepted,
             verification: fullReview(outcome: .passed, rounds: [
                 round(1, commit: "a91d07b", tests: .passed, correctness: .passed, regressions: .passed, prefix: "demo-thresholds"),
-            ])
+            ]),
+            publishing: PublishRequest(waiting: DemoID.publishApproval)
         ),
         Ticket(
             id: DemoID.alertCommandTicket, coordinatorID: DemoID.tideCoordinator, repositoryID: DemoID.tidepool,
@@ -204,10 +205,7 @@ enum DemoSeed {
             verification: fullReview(outcome: .passed, rounds: [
                 round(1, commit: "5d2a9f4", tests: .passed, correctness: .passed, regressions: .passed, prefix: "demo-sync-retry"),
             ]),
-            pullRequest: PullRequest(
-                number: 212, url: "https://github.com/Vyttle-LLC/tidepool/pull/212", state: .open, draft: false,
-                base: "feature/sync-retry", mergeState: "clean", checks: .success
-            ),
+            pullRequest: pullRequest(212, state: .open, base: "feature/sync-retry", checks: .success),
             merging: MergeRequest(
                 number: 212, base: "feature/sync-retry",
                 stage: MergeRequest.Stage(kind: .waitingForHuman, item: DemoID.mergeApproval)
@@ -222,9 +220,50 @@ enum DemoSeed {
                 VerificationRound(round: 1, commit: "c40e9d2", verifiers: [
                     VerifierRun(sessionID: "demo-flaky-tester", role: .tester, focus: "Tests", result: .pending),
                 ]),
-            ])
+            ]),
+            pullRequest: pullRequest(215, state: .open, base: "feature/sync-retry", checks: .pending)
+        ),
+        Ticket(
+            id: "demo-ticket-lock-holder-status", coordinatorID: DemoID.flakyCoordinator, repositoryID: DemoID.tidepool,
+            title: "Show the lock holder in sync status",
+            brief: "`tidepool sync status` names the lock's holder and how long it has held it.",
+            branch: "wiffletree/show-lock-holder-in-status", state: .readyForTesting
+        ),
+        Ticket(
+            id: "demo-ticket-sync-timeout", coordinatorID: DemoID.flakyCoordinator, repositoryID: DemoID.tidepool,
+            title: "Time out a stuck sync after 30 s",
+            brief: "A sync that holds the lock for 30 seconds without progress gives it up and fails.",
+            branch: "wiffletree/time-out-stuck-sync", state: .assigned
+        ),
+        Ticket(
+            id: "demo-ticket-reproduce-flake", coordinatorID: DemoID.flakyCoordinator, repositoryID: DemoID.tidepool,
+            title: "Reproduce the flake in CI",
+            brief: "Run the sync test in a loop in CI until it fails, and keep the failing run's log.",
+            branch: "wiffletree/reproduce-sync-flake", state: .accepted,
+            pullRequest: pullRequest(207, state: .merged, base: "main", checks: .success)
+        ),
+        Ticket(
+            id: "demo-ticket-pin-test-clock", coordinatorID: DemoID.flakyCoordinator, repositoryID: DemoID.tidepool,
+            title: "Pin the test clock",
+            brief: "The sync test reads a fixed clock, so lock timeouts happen at the same step every run.",
+            branch: "wiffletree/pin-test-clock", state: .accepted,
+            pullRequest: pullRequest(205, state: .merged, base: "main", checks: .success)
+        ),
+        Ticket(
+            id: "demo-ticket-quarantine-test", coordinatorID: DemoID.flakyCoordinator, repositoryID: DemoID.tidepool,
+            title: "Quarantine the flaky test",
+            brief: "Skip the sync test in CI until the flake is fixed.",
+            branch: "wiffletree/quarantine-sync-test", state: .closed,
+            pullRequest: pullRequest(203, state: .closed, base: "main", checks: .success)
         ),
     ]
+
+    private static func pullRequest(_ number: Int, state: PullRequest.State, base: String, checks: PullRequest.Checks) -> PullRequest {
+        PullRequest(
+            number: number, url: "https://github.com/Vyttle-LLC/tidepool/pull/\(number)", state: state, draft: false,
+            base: base, mergeState: "clean", checks: checks
+        )
+    }
 
     private static func fullReview(outcome: Verification.Outcome, rounds: [VerificationRound]) -> Verification {
         Verification(cycle: 1, level: CycleLevel(name: "Full", kind: .fullReview), maxRounds: 3, outcome: outcome, rounds: rounds)
@@ -250,10 +289,12 @@ enum DemoSeed {
         let lines: [(minutesAgo: Int, from: SeedSender, recipient: String, body: String)] = [
             (190, .human, DemoID.flakyCoordinator, "The sync test fails about one run in ten. Find out why."),
             (178, .coordinator, DemoID.flakyCoordinator, """
-                It's a lost lock: when the lock times out mid-sync, a second sync starts and the test sees both. I've planned two tickets:
+                It's a lost lock: when the lock times out mid-sync, a second sync starts and the test sees both. The test is quarantined, the flake reproduces in CI and the test clock is pinned. Next:
 
                 - **Retry the sync on a lost lock**
                 - **Log who holds the sync lock**, so the next flake is easy to read
+                - **Show the lock holder in sync status**
+                - **Time out a stuck sync after 30 s**
                 """),
             (80, .coordinator, DemoID.flakyCoordinator, """
                 **Retry the sync on a lost lock** is accepted and published as #212 into `feature/sync-retry`; checks passed.

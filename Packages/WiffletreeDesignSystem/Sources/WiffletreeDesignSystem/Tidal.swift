@@ -43,6 +43,7 @@ public enum Tidal {
     public static let tintGreen = Color(Palette.mix(Palette.green, 0.14, into: Palette.surface))
     public static let tintRed = Color(Palette.mix(Palette.red, 0.13, into: Palette.surface))
     public static let tintCyan = Color(Palette.mix(Palette.cyan, 0.14, into: Palette.surface))
+    public static let tintFocus = Color(Palette.mix(Palette.focus, 0.14, into: Palette.surface))
 }
 
 /// The tokens as UIKit colours that resolve per appearance.

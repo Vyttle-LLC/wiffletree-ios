@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		005F1DCADB17ADCD137CC60F /* HostDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C75E78D6AB26B3B3DA839B7E /* HostDetailView.swift */; };
+		01099A8F18C5E77BE43BE5F3 /* TicketsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFA884F57940E8114CEA21AD /* TicketsSheet.swift */; };
 		0C1D0E18A6FC0DA270E1F1C7 /* HostRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17E17D499F5C03C9EAF322A /* HostRow.swift */; };
 		0EE3782D68F4CC022A49FBAF /* WiffletreeKit in Frameworks */ = {isa = PBXBuildFile; productRef = B077928465509A90E540E904 /* WiffletreeKit */; };
 		106657F8A1271564FDE59EB2 /* HostID.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5F6B205E3E75408EC5659FA /* HostID.swift */; };
@@ -127,6 +128,7 @@
 		F10932206968EBF660F7D96E /* ConnectionNotice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionNotice.swift; sourceTree = "<group>"; };
 		F5F6B205E3E75408EC5659FA /* HostID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostID.swift; sourceTree = "<group>"; };
 		FC9C7CFD90F2B29C68539962 /* HostShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostShell.swift; sourceTree = "<group>"; };
+		FFA884F57940E8114CEA21AD /* TicketsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TicketsSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -210,6 +212,7 @@
 				DFF80581416DA3DD395D97CD /* ProjectOverview.swift */,
 				DDFD1D7EB95ADADA504BF360 /* ProjectsTab.swift */,
 				713408C587DA102A8FE4A12A /* TicketDetailView.swift */,
+				FFA884F57940E8114CEA21AD /* TicketsSheet.swift */,
 			);
 			path = Projects;
 			sourceTree = "<group>";
@@ -456,6 +459,7 @@
 				6D55FFBDBA253343D9BA1844 /* ScanView.swift in Sources */,
 				132FABC6FA3AB4AAF501CA50 /* SettingsTab.swift in Sources */,
 				452C7513CA9689DE504BC88C /* TicketDetailView.swift in Sources */,
+				01099A8F18C5E77BE43BE5F3 /* TicketsSheet.swift in Sources */,
 				E9BA8DA60E2B790E7CAD67E9 /* UsageModel.swift in Sources */,
 				51CE38896C4B5356F19AC6F6 /* UsageTab.swift in Sources */,
 				56F0B9DBF2BD9A927B4E0151 /* WelcomeView.swift in Sources */,

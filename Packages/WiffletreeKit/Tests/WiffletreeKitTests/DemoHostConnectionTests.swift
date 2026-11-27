@@ -55,6 +55,20 @@ struct DemoHostConnectionTests {
         #expect(DemoHostConnection.name == "Demo Mac")
     }
 
+    @Test func flakySyncTestsTicketsAreTheMockupsAndWaitingApprovalsNeedYou() async throws {
+        let seed = try await snapshot()
+        let flaky = seed.ticketTable(of: DemoID.flakyCoordinator)
+        #expect(flaky.summary == "3 in progress, 4 done")
+        #expect(flaky.inProgress.map(\.statusWord) == ["Verifying · round 1", "Ready for testing", "Assigned"])
+        #expect(flaky.inProgress.map(\.pullRequestLabel) == ["#215 open", "Not published", "Not published"])
+        #expect(flaky.done.map(\.pullRequestLabel) == ["#212 open", "#207 merged", "#205 merged", "#203 closed"])
+        #expect(flaky.needingYou == [DemoID.syncRetryTicket])
+        #expect(seed.ticketTable(of: DemoID.tideCoordinator).needingYou == [DemoID.thresholdsTicket])
+
+        _ = try await demo.request(ResolveAttentionCommand(id: DemoID.publishApproval, answer: "approved"))
+        #expect(try await snapshot().ticketTable(of: DemoID.tideCoordinator).needingYou.isEmpty)
+    }
+
     @Test func inboxCountsMatchThePerProjectBadges() async throws {
         let snapshot = try await snapshot()
         let badges = snapshot.openProjects.map { openCount(snapshot, in: $0.id) }

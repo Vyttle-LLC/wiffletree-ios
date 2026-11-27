@@ -231,6 +231,7 @@ public final class DemoHostConnection: HostConnection {
                     number: 214, url: "https://github.com/Vyttle-LLC/tidepool/pull/214", state: .open, draft: false,
                     base: "main", mergeState: "clean", checks: .pending
                 )
+                ticket.publishing = nil
             }
             reply = "Published: **#214** is open on Vyttle-LLC/tidepool, and its checks are running. It merges into `main`, so you merge it on GitHub."
         case DemoID.mergeApproval where approved:
@@ -238,11 +239,12 @@ public final class DemoHostConnection: HostConnection {
                 ticket.pullRequest?.state = .merged
                 ticket.merging = nil
             }
-            reply = "Merged **#212** into `feature/sync-retry`. Flaky sync test now waits only on **Log who holds the sync lock**."
+            reply = "Merged **#212** into `feature/sync-retry`. Flaky sync test now waits only on its three tickets in progress."
         case DemoID.mergeApproval:
             updateTicket(DemoID.syncRetryTicket, in: &shared) { $0.merging = nil }
             reply = "Understood, I've left it as it is. It stays accepted on its branch."
         case DemoID.publishApproval:
+            updateTicket(DemoID.thresholdsTicket, in: &shared) { $0.publishing = nil }
             reply = "Understood, I've left it as it is. It stays accepted on its branch."
         default:
             reply = "Thanks: **\(answer)** it is. I've passed it to the implementer."

@@ -138,7 +138,7 @@ struct HomeTests {
         #expect(groups[0].projects.map(\.summary) == [
             "Implementing · 1 of 3 tickets accepted",
             "Implementing · coordinator asked a question",
-            "Verifying · 1 of 2 tickets accepted",
+            "Implementing · 3 of 6 tickets accepted",
         ])
     }
 

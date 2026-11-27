@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 import WiffletreeDesignSystem
 import WiffletreeKit
@@ -57,7 +58,7 @@ private struct ChatContent: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 16) {
                         ForEach(chat.entries) { entry in
-                            EntryView(entry: entry, coordinatorName: chat.overview?.project.name ?? "Coordinator")
+                            EntryView(chat: chat, entry: entry, coordinatorName: chat.overview?.project.name ?? "Coordinator")
                         }
                         ForEach(chat.liveNarration) { step in
                             CoordinatorWords(name: chat.overview?.project.name ?? "Coordinator", time: nil, markdown: step.text)
@@ -87,6 +88,7 @@ private struct ChatContent: View {
 
 private struct EntryView: View {
     @Environment(LiveHost.self) private var host
+    let chat: ProjectChat
     let entry: ChatEntry
     let coordinatorName: String
 
@@ -95,14 +97,21 @@ private struct EntryView: View {
         case .reply(let message):
             CoordinatorWords(name: coordinatorName, time: message.date, markdown: message.body)
         case .human(let message):
-            Text(message.body)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 9)
-                .foregroundStyle(Tidal.onAccent)
-                .background(Tidal.accent, in: .rect(cornerRadius: 18))
-                .frame(maxWidth: 300, alignment: .trailing)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .textSelection(.enabled)
+            VStack(alignment: .trailing, spacing: 6) {
+                if !message.attachments.isEmpty {
+                    SentAttachments(chat: chat, attachments: message.attachments)
+                }
+                if !message.body.isEmpty {
+                    Text(message.body)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 9)
+                        .foregroundStyle(Tidal.onAccent)
+                        .background(Tidal.accent, in: .rect(cornerRadius: 18))
+                        .textSelection(.enabled)
+                }
+            }
+            .frame(maxWidth: 300, alignment: .trailing)
+            .frame(maxWidth: .infinity, alignment: .trailing)
         case .activity(let messages):
             ActivityLine(messages: messages, names: names)
         }
@@ -113,6 +122,54 @@ private struct EntryView: View {
         let name = host.snapshot?.sessions.first { $0.id == sender }?.name ?? "An agent"
         // "Reviewer · Correctness" reads as "Reviewer" in the folded line.
         return name.components(separatedBy: " · ").first ?? name
+    }
+}
+
+/// A sent message's attachments: images as thumbnails, and any file the host cannot show as an
+/// image as a paperclip line naming it.
+private struct SentAttachments: View {
+    let chat: ProjectChat
+    let attachments: [Attachment]
+
+    var body: some View {
+        let images = attachments.filter { $0.image != nil && !chat.unreadable.contains($0.path) }
+        let files = attachments.filter { !images.contains($0) }
+        VStack(alignment: .trailing, spacing: 6) {
+            if !images.isEmpty {
+                HStack(spacing: 6) {
+                    ForEach(images, id: \.path) { attachment in
+                        SentThumbnail(image: chat.thumbnails[attachment.path], name: attachment.name)
+                            .task { await chat.loadThumbnail(of: attachment) }
+                    }
+                }
+            }
+            if !files.isEmpty {
+                Label(files.map(\.name).joined(separator: ", "), systemImage: "paperclip")
+                    .font(.footnote)
+                    .foregroundStyle(Tidal.subtle)
+                    .lineLimit(2)
+            }
+        }
+    }
+}
+
+private struct SentThumbnail: View {
+    let image: UIImage?
+    let name: String
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image).resizable().scaledToFill()
+            } else {
+                Tidal.overlay.overlay(ProgressView())
+            }
+        }
+        .frame(width: 96, height: 96)
+        .clipShape(.rect(cornerRadius: 12))
+        .accessibilityElement()
+        .accessibilityLabel(name)
+        .accessibilityAddTraits(.isImage)
     }
 }
 
@@ -274,51 +331,32 @@ private struct WorkingBar: View {
     }
 }
 
-/// The reply field with dictation and send. Send is dimmed until there is text.
+/// The reply field with photos, dictation and send. Send is dimmed until there is text or a
+/// photo; the + is there only when the host takes photos from this iPhone.
 private struct Composer: View {
     @Bindable var chat: ProjectChat
     let isViewOnly: Bool
     let isDemo: Bool
     @State private var dictation = Dictation()
+    @State private var isChoosingPhotos = false
+    @State private var isTakingPhoto = false
+    @State private var chosen: [PhotosPickerItem] = []
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 8) {
-            VStack(alignment: .leading, spacing: 6) {
-                TextField(placeholder, text: $chat.draft, axis: .vertical)
-                    .lineLimit(1...5)
-                    .disabled(isViewOnly)
-                if dictation.isListening {
-                    Waveform(levels: dictation.levels)
+        VStack(spacing: 6) {
+            if let failure = chat.sendFailure {
+                SendFailure(text: failure) {
+                    dictation.cancel()
+                    Task { await chat.send() }
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 9)
-            .background(Tidal.surface, in: .rect(cornerRadius: 20))
-            .overlay(RoundedRectangle(cornerRadius: 20).stroke(Tidal.edge, lineWidth: 1))
-
-            RoundButton(
-                systemImage: dictation.isListening ? "stop.fill" : "mic.fill",
-                filled: dictation.isListening,
-                label: dictation.isListening ? "Stop dictating" : "Dictate"
-            ) {
-                if dictation.isListening {
-                    dictation.stop()
-                } else {
-                    let before = chat.draft
-                    Task {
-                        await dictation.start { heard in
-                            chat.draft = before.isEmpty ? heard : "\(before) \(heard)"
-                        }
-                    }
+            HStack(alignment: .bottom, spacing: 8) {
+                if chat.canAttach {
+                    attachMenu
                 }
+                field
+                buttons
             }
-            .disabled(isViewOnly)
-
-            RoundButton(systemImage: "arrow.up", filled: chat.canSend, label: "Send") {
-                dictation.cancel()
-                Task { await chat.send() }
-            }
-            .disabled(!chat.canSend || isViewOnly)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -328,12 +366,144 @@ private struct Composer: View {
         } message: {
             Text(dictation.problem ?? "")
         }
+        .photosPicker(isPresented: $isChoosingPhotos, selection: $chosen, maxSelectionCount: 10, matching: .images)
+        .onChange(of: chosen) { _, items in
+            guard !items.isEmpty else { return }
+            chosen = []
+            let loads = items.map { item in
+                { @Sendable in (try? await item.loadTransferable(type: Data.self)).flatMap(Photo.init(data:)) }
+            }
+            Task { await chat.attach(loads) }
+        }
+        .fullScreenCover(isPresented: $isTakingPhoto) {
+            CameraPicker { image in
+                Task { await chat.attach([{ Photo(image: image) }]) }
+            }
+            .ignoresSafeArea()
+        }
         .onDisappear { dictation.cancel() }
+    }
+
+    private var attachMenu: some View {
+        Menu {
+            if CameraPicker.isAvailable {
+                Button("Take photo", systemImage: "camera") { isTakingPhoto = true }
+            }
+            Button("Choose photos", systemImage: "photo.on.rectangle") { isChoosingPhotos = true }
+        } label: {
+            RoundIcon(systemImage: "plus", filled: false)
+        }
+        .disabled(chat.isSending)
+        .accessibilityLabel("Attach photos")
+    }
+
+    private var field: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if !chat.photos.isEmpty {
+                ComposerPhotos(chat: chat)
+            }
+            if let progress = chat.uploadProgress {
+                ProgressView(value: progress)
+                    .tint(Tidal.accent)
+                    .accessibilityLabel("Uploading photos")
+            }
+            TextField(placeholder, text: $chat.draft, axis: .vertical)
+                .lineLimit(1...5)
+                .disabled(isViewOnly)
+            if dictation.isListening {
+                Waveform(levels: dictation.levels)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
+        .background(Tidal.surface, in: .rect(cornerRadius: 20))
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Tidal.edge, lineWidth: 1))
+    }
+
+    @ViewBuilder private var buttons: some View {
+        RoundButton(
+            systemImage: dictation.isListening ? "stop.fill" : "mic.fill",
+            filled: dictation.isListening,
+            label: dictation.isListening ? "Stop dictating" : "Dictate"
+        ) {
+            if dictation.isListening {
+                dictation.stop()
+            } else {
+                let before = chat.draft
+                Task {
+                    await dictation.start { heard in
+                        chat.draft = before.isEmpty ? heard : "\(before) \(heard)"
+                    }
+                }
+            }
+        }
+        .disabled(isViewOnly)
+
+        RoundButton(systemImage: "arrow.up", filled: chat.canSend, label: "Send") {
+            dictation.cancel()
+            Task { await chat.send() }
+        }
+        .disabled(!chat.canSend || isViewOnly)
     }
 
     private var placeholder: String {
         if isViewOnly { return "View only: reply on your Mac" }
         return isDemo ? "Reply to the demo coordinator" : "Reply to your coordinator"
+    }
+}
+
+/// The chosen photos above the text field, each with a remove ×.
+private struct ComposerPhotos: View {
+    let chat: ProjectChat
+
+    var body: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 8) {
+                ForEach(chat.photos) { photo in
+                    Image(uiImage: photo.thumbnail)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 56, height: 56)
+                        .clipShape(.rect(cornerRadius: 10))
+                        .accessibilityLabel(photo.upload.name)
+                        .overlay(alignment: .topTrailing) {
+                            if !chat.isSending {
+                                Button { withAnimation(.snappy) { chat.remove(photo.id) } } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 18))
+                                        .symbolRenderingMode(.palette)
+                                        .foregroundStyle(.white, .black.opacity(0.6))
+                                }
+                                .buttonStyle(.plain)
+                                .offset(x: 6, y: -6)
+                                .accessibilityLabel("Remove \(photo.upload.name)")
+                            }
+                        }
+                }
+            }
+            .padding(.top, 6)
+            .padding(.trailing, 6)
+        }
+        .scrollIndicators(.hidden)
+    }
+}
+
+/// Why the last send failed, with a retry that resumes it.
+private struct SendFailure: View {
+    let text: String
+    let retry: () -> Void
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Label(text, systemImage: "exclamationmark.circle")
+                .font(.footnote)
+                .foregroundStyle(Tidal.red)
+            Spacer(minLength: 8)
+            Button("Retry", action: retry)
+                .font(.footnote.weight(.semibold))
+                .tint(Tidal.accent)
+        }
+        .padding(.horizontal, 4)
     }
 }
 
@@ -345,14 +515,23 @@ private struct RoundButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(filled ? Tidal.onAccent : Tidal.accent)
-                .frame(width: 38, height: 38)
-                .background(filled ? Tidal.accent : Tidal.tintAccent, in: .circle)
+            RoundIcon(systemImage: systemImage, filled: filled)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
+    }
+}
+
+private struct RoundIcon: View {
+    let systemImage: String
+    let filled: Bool
+
+    var body: some View {
+        Image(systemName: systemImage)
+            .font(.body.weight(.semibold))
+            .foregroundStyle(filled ? Tidal.onAccent : Tidal.accent)
+            .frame(width: 38, height: 38)
+            .background(filled ? Tidal.accent : Tidal.tintAccent, in: .circle)
     }
 }
 

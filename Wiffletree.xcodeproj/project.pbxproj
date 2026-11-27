@@ -28,6 +28,8 @@
 		56F0B9DBF2BD9A927B4E0151 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87A377B171F1292A8E9CF667 /* WelcomeView.swift */; };
 		57E758028A8CD3129AA68643 /* WiffletreeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 04F7EF1C1A56C5D53BD2EA47 /* WiffletreeKit */; };
 		595DE090609398987AD8CFBA /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F6C765B9CE3D12F3B7DF516 /* AppModel.swift */; };
+		617B6672D85687065787FE16 /* Photos.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30AEFF2A7584F6067B6B4E2B /* Photos.swift */; };
+		6375103CBA156F89B5FD3D20 /* ComposerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46209670F43AF97B8C35A977 /* ComposerTests.swift */; };
 		6D55FFBDBA253343D9BA1844 /* ScanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A37FB3A91D415317F50C234 /* ScanView.swift */; };
 		73CBD4B04F55A3CC02603E0C /* Dictation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D86414BC25CF2B8162A1549 /* Dictation.swift */; };
 		7CA8AD2EB311EADB265255B1 /* MarkdownText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A34352DDD240377692DE9B1 /* MarkdownText.swift */; };
@@ -72,12 +74,14 @@
 		0E774814CE8BC91C361DAF9E /* Preferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Preferences.swift; sourceTree = "<group>"; };
 		1591F301BA6E52996067F2BF /* AppModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelTests.swift; sourceTree = "<group>"; };
 		18D6A184598BCC3169B22C9E /* FakeConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FakeConnection.swift; sourceTree = "<group>"; };
+		30AEFF2A7584F6067B6B4E2B /* Photos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Photos.swift; sourceTree = "<group>"; };
 		31C24E9F0C6D26889C1F7A2C /* PairingFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingFlow.swift; sourceTree = "<group>"; };
 		3393C98BF16793E7DD045E31 /* QuotaLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaLine.swift; sourceTree = "<group>"; };
 		354E3E352CCED228316582FD /* ProjectChat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectChat.swift; sourceTree = "<group>"; };
 		40B9918EC42AEC64DA48E64E /* LiveDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveDependencies.swift; sourceTree = "<group>"; };
 		42418774F60D581CEE638F7B /* Wiffletree.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Wiffletree.entitlements; sourceTree = "<group>"; };
 		45B638EF695D0AE4582EB21F /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		46209670F43AF97B8C35A977 /* ComposerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerTests.swift; sourceTree = "<group>"; };
 		4887661BCB87CDF1329B712F /* KeyChangedCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyChangedCard.swift; sourceTree = "<group>"; };
 		4963B9B41758F113BCD332F9 /* WiffletreeDesignSystem */ = {isa = PBXFileReference; lastKnownFileType = folder; name = WiffletreeDesignSystem; path = Packages/WiffletreeDesignSystem; sourceTree = SOURCE_ROOT; };
 		4F6C765B9CE3D12F3B7DF516 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
@@ -196,6 +200,7 @@
 				52430F311A88FB600F146B88 /* AgentsSheet.swift */,
 				6D86414BC25CF2B8162A1549 /* Dictation.swift */,
 				0A34352DDD240377692DE9B1 /* MarkdownText.swift */,
+				30AEFF2A7584F6067B6B4E2B /* Photos.swift */,
 				354E3E352CCED228316582FD /* ProjectChat.swift */,
 				A35A0457535FFC6CDB7EAEFD /* ProjectChatView.swift */,
 				DFF80581416DA3DD395D97CD /* ProjectOverview.swift */,
@@ -209,6 +214,7 @@
 			isa = PBXGroup;
 			children = (
 				1591F301BA6E52996067F2BF /* AppModelTests.swift */,
+				46209670F43AF97B8C35A977 /* ComposerTests.swift */,
 				98D7B9BFA91C669361E533AB /* InboxModelTests.swift */,
 				DD49BF6752A871CA67D1742B /* KeychainKeyStoreTests.swift */,
 				B0BF238A4F583826A817BB3E /* ProjectsTests.swift */,
@@ -393,6 +399,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B93E89CD79631F5D4CE93A69 /* AppModelTests.swift in Sources */,
+				6375103CBA156F89B5FD3D20 /* ComposerTests.swift in Sources */,
 				1C6C123803145680EBF440D7 /* FakeConnection.swift in Sources */,
 				D1FEB44D415FD138AFAEAA1C /* InboxModelTests.swift in Sources */,
 				AE2216CC3B4B5E9C1F17D9C9 /* KeychainKeyStoreTests.swift in Sources */,
@@ -429,6 +436,7 @@
 				B1A316518D959E82FEEC6EC1 /* PairingFlow.swift in Sources */,
 				4B99EB9BD0D6426B3A035446 /* PairingFlowView.swift in Sources */,
 				453677814C2E05B8FD0A088F /* PairingSteps.swift in Sources */,
+				617B6672D85687065787FE16 /* Photos.swift in Sources */,
 				9589D71358980E19FE8982B2 /* Preferences.swift in Sources */,
 				E4D921297FB1D6B4BE5E9863 /* ProjectChat.swift in Sources */,
 				DF07F72C440B144BC7725D51 /* ProjectChatView.swift in Sources */,

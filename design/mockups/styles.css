@@ -303,13 +303,35 @@ code { font-family: var(--mono); font-size: 0.82em; background: var(--overlay); 
 
 /* ---------- Conversation ---------- */
 
-.pinned { flex: none; margin: 0 12px 6px; background: var(--surface); border: 0.5px solid var(--edge); border-radius: 12px; padding: 10px 12px; font-size: 14px; }
-.pinned .top { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; }
-.pinned .top .pct { margin-left: auto; font-weight: 500; color: var(--subtle); font-size: 13px; }
-.pinned .progress { margin: 8px 0 6px; }
-.pinned .tickets { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-.pinned .tk { display: flex; align-items: center; gap: 8px; }
-.pinned .tk .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The pinned tickets line: the desktop panel's header on one row. Tapping it opens the tickets sheet. */
+.pinned { flex: none; margin: 0 12px 6px; display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--surface); border: 0.5px solid var(--edge); border-radius: 12px; font-size: 14px; }
+.pinned .summary { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--subtle); }
+.pinned .summary b { color: var(--text); font-weight: 600; }
+.pinned .chev { color: var(--muted); font-size: 14px; stroke-width: 2.4; }
+.needs { display: inline-flex; align-items: center; gap: 4px; color: var(--yellow); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.needs .i { font-size: 14px; stroke-width: 2.2; }
+
+/* The tickets sheet: the desktop's pinned panel. Title, status word in its state's colour, PR link. */
+.sheet.tickets { padding-bottom: 0; display: flex; flex-direction: column; }
+.sheet.medium { height: 468px; }
+.sheet.large { top: 62px; }
+.sheet-head { display: flex; align-items: baseline; gap: 8px; padding: 2px 20px 10px; font-size: 15px; color: var(--subtle); white-space: nowrap; }
+.sheet-head b { color: var(--text); font-size: 17px; font-weight: 600; }
+.sheet-head .live-from { margin-left: auto; font-size: 12px; }
+.tk-row .title { font-size: 16px; display: flex; align-items: center; gap: 8px; }
+.tk-row .title span:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk-row .cols { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.tk-row .cols .pr { margin-left: auto; }
+.status-word.green { color: var(--green); }
+.status-word.red { color: var(--red); }
+.status-word.focus { color: var(--focus); }
+.status-word.subtle { color: var(--subtle); }
+/* Links are Tidal blue, as the desktop's link colour is; the arrow marks that it leaves the app. */
+.pr-link { color: var(--blue); text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
+.pr-link .arrow { text-decoration: none; display: inline-block; margin-left: 2px; font-size: 12px; }
+.pr-none { color: var(--subtle); white-space: nowrap; }
+.done-toggle { color: var(--subtle); font-size: 15px; gap: 6px; }
+.done-toggle .i { font-size: 13px; stroke-width: 2.4; }
 
 .chat { padding: 4px 16px 12px; display: flex; flex-direction: column; gap: 14px; font-size: 16px; line-height: 1.42; }
 .msg-head { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; margin-bottom: 3px; }

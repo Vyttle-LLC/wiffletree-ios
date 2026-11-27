@@ -15,7 +15,7 @@
   <div class="appearance"></div>
 </header>
 <div class="intro">
-  <p>A project is its conversation with the coordinator, as on the desktop. Ticket status stays pinned at the top; the composer stays at the bottom. Messages render Markdown; agent-to-agent traffic folds into one activity line.</p>
+  <p>A project is its conversation with the coordinator, as on the desktop. Ticket status stays pinned at the top as one line, “Tickets · 2 in progress, 1 done”, which opens the desktop's tickets panel as a sheet; the composer stays at the bottom. Messages render Markdown; agent-to-agent traffic folds into one activity line.</p>
 </div>
 <main class="gallery">
 
@@ -25,9 +25,9 @@
         <div class="nav bordered"><div class="lead"><span class="back"><svg class="i"><use href="#i-back"/></svg>Projects</span></div><div class="title">Tide alerts<small>Coordinator · working</small></div><div class="trail"><svg class="i"><use href="#i-dots"/></svg></div></div>
         <div style="height:8px"></div>
         <div class="pinned">
-          <div class="top">Implementing<span class="pct">69% · 1 of 3 accepted</span><svg class="i" style="color:var(--muted);font-size:15px;stroke-width:2.4"><use href="#i-down"/></svg></div>
-          <div class="progress"><span class="green" style="width:33%"></span><span style="width:26%"></span><span style="width:10%"></span></div>
-          <div class="meta">Add the tidepool alert command: verifying · round 2</div>
+          <span class="summary"><b>Tickets</b> · 2 in progress, 1 done</span>
+          <span class="needs"><svg class="i"><use href="#i-question"/></svg>1 needs you</span>
+          <svg class="i chev"><use href="#i-chev"/></svg>
         </div>
         <div class="content">
           <div class="chat">
@@ -68,13 +68,9 @@
         <div class="nav bordered"><div class="lead"><span class="back"><svg class="i"><use href="#i-back"/></svg>Projects</span></div><div class="title">Tide alerts<small>Coordinator · working</small></div><div class="trail"><svg class="i"><use href="#i-dots"/></svg></div></div>
         <div style="height:8px"></div>
         <div class="pinned">
-          <div class="top">Implementing<span class="pct">69% · 1 of 3 accepted</span><svg class="i" style="color:var(--muted);font-size:15px;stroke-width:2.4;transform:rotate(180deg)"><use href="#i-down"/></svg></div>
-          <div class="progress"><span class="green" style="width:33%"></span><span style="width:26%"></span><span style="width:10%"></span></div>
-          <div class="tickets">
-            <div class="tk"><span class="name">Add the tidepool alert command</span><span class="chip yellow"><svg class="i"><use href="#i-spin"/></svg>Verifying · 2</span></div>
-            <div class="tk"><span class="name">Show thresholds on the station page</span><span class="chip cyan"><svg class="i"><use href="#i-spin"/></svg>Assigned</span></div>
-            <div class="tk"><span class="name">Store alert thresholds per station</span><span class="chip green"><svg class="i"><use href="#i-check"/></svg>Accepted</span></div>
-          </div>
+          <span class="summary"><b>Tickets</b> · 2 in progress, 1 done</span>
+          <span class="needs"><svg class="i"><use href="#i-question"/></svg>1 needs you</span>
+          <svg class="i chev"><use href="#i-chev"/></svg>
         </div>
         <div class="content">
           <div class="chat">
@@ -95,7 +91,68 @@
         </div>
       </div>
     </div>
-    <figcaption><b>Tickets expanded, dictating</b>Tapping the pinned card lists every ticket with its state; tapping one opens <a href="ticket.html">Ticket detail</a>. The mic dictates on the device into the field (words appear as you speak); the stop square ends it and you can still edit before sending.</figcaption>
+    <figcaption><b>Dictating</b>The mic dictates on the device into the field (words appear as you speak); the stop square ends it and you can still edit before sending.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <div class="phones">
+      <div class="phone">
+        <div class="nav bordered"><div class="lead"><span class="back"><svg class="i"><use href="#i-back"/></svg>Projects</span></div><div class="title">Flaky sync test<small>Coordinator · idle</small></div><div class="trail"><svg class="i"><use href="#i-dots"/></svg></div></div>
+        <div style="height:8px"></div>
+        <div class="pinned">
+          <span class="summary"><b>Tickets</b> · 3 in progress, 4 done</span>
+          <span class="needs"><svg class="i"><use href="#i-question"/></svg>1 needs you</span>
+          <svg class="i chev"><use href="#i-chev"/></svg>
+        </div>
+        <div class="content">
+          <div class="chat">
+            <div>
+              <div class="msg-head"><span class="avatar"><svg class="i"><use href="#i-grid"/></svg></span>Flaky sync test<span class="meta">8:10</span></div>
+              <div class="md"><p>Published <b>Retry the sync on a lost lock</b> as #212 into <code>feature/sync-retry</code>. Checks passed; the merge waits for you in the Inbox.</p></div>
+            </div>
+          </div>
+        </div>
+        <div class="scrim"></div>
+        <div class="sheet tickets medium">
+          <div class="grabber"></div>
+          <div class="sheet-head"><span><b>Tickets</b> · 3 in progress, 4 done</span><span class="live-from">Live from Wiffletree</span></div>
+          <div class="list">
+            <div class="row tk-row"><div class="main"><span class="title"><span>Log who holds the sync lock</span></span><span class="cols"><span class="status-word subtle">Verifying · round 1</span><span class="pr"><span class="pr-link">#215 open<span class="arrow">↗</span></span></span></span></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+            <div class="row tk-row"><div class="main"><span class="title"><span>Show the lock holder in sync status</span></span><span class="cols"><span class="status-word focus">Ready for testing</span><span class="pr pr-none">Not published</span></span></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+            <div class="row tk-row"><div class="main"><span class="title"><span>Time out a stuck sync after 30 s</span></span><span class="cols"><span class="status-word focus">Assigned</span><span class="pr pr-none">Not published</span></span></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+            <div class="row done-toggle"><svg class="i"><use href="#i-chev"/></svg>4 done<span class="needs" style="margin-left:auto"><svg class="i"><use href="#i-question"/></svg>1 needs you</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Tickets sheet, medium</b>Tapping the pinned line opens a sheet that mirrors the desktop's pinned panel: each ticket's title, its status in the desktop's words and colour, and its pull request as a link, “#215 open ↗”, or “Not published” in grey. The link opens GitHub; the rest of the row pushes <a href="ticket.html">Ticket detail</a> inside the sheet. Done tickets wait folded under “4 done”, which says when one of them needs you.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <div class="phones">
+      <div class="phone">
+        <div class="nav bordered"><div class="lead"><span class="back"><svg class="i"><use href="#i-back"/></svg>Projects</span></div><div class="title">Flaky sync test<small>Coordinator · idle</small></div><div class="trail"><svg class="i"><use href="#i-dots"/></svg></div></div>
+        <div class="scrim"></div>
+        <div class="sheet tickets large">
+          <div class="grabber"></div>
+          <div class="sheet-head"><span><b>Tickets</b> · 3 in progress, 4 done</span><span class="live-from">Live from Wiffletree</span></div>
+          <div class="list">
+            <div class="row tk-row"><div class="main"><span class="title"><span>Log who holds the sync lock</span></span><span class="cols"><span class="status-word subtle">Verifying · round 1</span><span class="pr"><span class="pr-link">#215 open<span class="arrow">↗</span></span></span></span></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+            <div class="row tk-row"><div class="main"><span class="title"><span>Show the lock holder in sync status</span></span><span class="cols"><span class="status-word focus">Ready for testing</span><span class="pr pr-none">Not published</span></span></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+            <div class="row tk-row"><div class="main"><span class="title"><span>Time out a stuck sync after 30 s</span></span><span class="cols"><span class="status-word focus">Assigned</span><span class="pr pr-none">Not published</span></span></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+          </div>
+          <div class="section-head" style="padding-top:14px"><span class="done-toggle" style="display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0"><svg class="i"><use href="#i-down"/></svg>4 done</span></div>
+          <div class="list">
+            <div class="row tk-row"><div class="main"><span class="title"><span>Retry the sync on a lost lock</span><span class="needs"><svg class="i"><use href="#i-question"/></svg>Needs you</span></span><span class="cols"><span class="status-word green">Accepted</span><span class="pr"><span class="pr-link">#212 open<span class="arrow">↗</span></span></span></span></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+            <div class="row tk-row"><div class="main"><span class="title"><span>Reproduce the flake in CI</span></span><span class="cols"><span class="status-word green">Accepted</span><span class="pr"><span class="pr-link">#207 merged<span class="arrow">↗</span></span></span></span></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+            <div class="row tk-row"><div class="main"><span class="title"><span>Pin the test clock</span></span><span class="cols"><span class="status-word green">Accepted</span><span class="pr"><span class="pr-link">#205 merged<span class="arrow">↗</span></span></span></span></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+            <div class="row tk-row"><div class="main"><span class="title"><span>Quarantine the flaky test</span></span><span class="cols"><span class="status-word subtle">Closed</span><span class="pr"><span class="pr-link">#203 closed<span class="arrow">↗</span></span></span></span></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+          </div>
+          <div class="section-foot">Planned tickets without an open pull request are not listed until work starts, as on the desktop.</div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Tickets sheet, large</b>Dragged up, the sheet fills the screen and “4 done” unfolds. The status word is the ticket's own state, so a ticket still verifying shows “Verifying” even with a pull request open; the link beside it shows the pull request's state. “Needs you” marks a ticket with an approval waiting in the Inbox: here, the merge of #212.</figcaption>
   </figure>
 
 </main>

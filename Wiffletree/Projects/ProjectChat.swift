@@ -64,11 +64,13 @@ final class ProjectChat {
     /// Whether the host may hold messages older than the loaded ones.
     private(set) var hasEarlier = false
     private(set) var isLoadingEarlier = false
+    /// Whether the last "Load earlier" failed; the row offers it again.
+    private(set) var earlierFailed = false
     /// The coordinator's latest run; its narration shows while it runs.
     private(set) var turn: StepPage?
     /// Whether the newest messages have loaded once; until then the chat shows it is loading.
     private(set) var hasLoaded = false
-    /// Why the last load failed, until the newest messages load again.
+    /// Why the newest messages did not load, until they do.
     private(set) var failure: String?
     /// Why the last send failed, until a send succeeds; sending again retries it.
     private(set) var sendFailure: String?
@@ -228,70 +230,62 @@ final class ProjectChat {
     /// The page of messages before the oldest loaded one, added above it.
     func loadEarlier() async {
         guard hasEarlier, !isLoadingEarlier, let oldest = messages.first else { return }
+        guard let coordinator else { return }
         isLoadingEarlier = true
         defer { isLoadingEarlier = false }
-        await load { coordinator in
-            let page = try await host.connection.request(MessagesCommand(sessionID: coordinator, before: oldest.sequence, limit: pageSize))
+        do {
+            let page = try await host.connection.request(MessagesCommand(sessionID: coordinator.id, before: oldest.sequence, limit: pageSize))
+            earlierFailed = false
             // A newest page that landed meanwhile may have replaced what this page continues.
             guard messages.first?.id == oldest.id else { return }
             messages = page + messages
             hasEarlier = page.count == pageSize
+        } catch {
+            earlierFailed = true
         }
     }
 
     /// The newest messages and the whole latest turn: on opening, after events were lost, and
     /// when the person retries a failed load.
     func reloadAll() async {
-        await load { coordinator in
-            try await reloadMessages(of: coordinator)
-            turn = try await host.connection.request(StepsCommand(sessionID: coordinator))
-        }
+        await reloadMessages()
+        guard let coordinator else { return }
+        if let latest = try? await host.connection.request(StepsCommand(sessionID: coordinator.id)) { turn = latest }
     }
 
+    /// The newest page, merged into what is loaded. Only this read sets or clears `failure`; a
+    /// failure while the host is disconnected is the connection's, which the host header shows.
     private func reloadMessages() async {
-        await load(reloadMessages(of:))
-    }
-
-    private func reloadMessages(of coordinator: String) async throws {
-        let page = try await host.connection.request(MessagesCommand(sessionID: coordinator, limit: pageSize))
-        mergeNewest(page)
-        hasLoaded = true
-        failure = nil
+        guard let coordinator else { return }
+        do {
+            mergeNewest(try await host.connection.request(MessagesCommand(sessionID: coordinator.id, limit: pageSize)))
+            hasLoaded = true
+            failure = nil
+        } catch {
+            if host.isConnected { failure = error.localizedDescription }
+        }
     }
 
     /// Takes the newest page as the truth from its oldest message on, keeping the loaded messages
-    /// before it. A page short of full holds the whole conversation; a full one that does not
-    /// reach back to the loaded messages leaves a gap, so it starts the history again from itself
-    /// and "Load earlier" fills the rest.
+    /// before it and whether earlier ones remain. Otherwise the page starts the history again:
+    /// short of full it holds the whole conversation; full, it does not reach back to what pages
+    /// held, so "Load earlier" fills the gap.
     private func mergeNewest(_ page: [Message]) {
-        let isFull = page.count == pageSize
-        let older: [Message]
-        if let first = page.first, isFull, let newestPaged, newestPaged >= first.sequence {
-            older = messages.filter { $0.sequence < first.sequence }
+        if let first = page.first, page.count == pageSize, let newestPaged, newestPaged >= first.sequence {
+            messages = messages.filter { $0.sequence < first.sequence } + page
         } else {
-            older = []
+            messages = page
+            hasEarlier = page.count == pageSize
         }
-        messages = older + page
         newestPaged = page.last?.sequence
-        if older.isEmpty { hasEarlier = isFull }
     }
 
-    /// Only the steps changed since the turn last read, merged into it.
+    /// Only the steps changed since the turn last read, merged into it. A failed read waits for
+    /// the next steps event, leaving the turn as it was.
     private func refreshTurn() async {
-        await load { coordinator in
-            let newer = try await host.connection.request(StepsCommand(sessionID: coordinator, after: turn?.revision ?? 0))
-            turn = turn.map { $0.merging(newer) } ?? newer
-        }
-    }
-
-    /// Runs `fetch` for the coordinator, noting why it failed. Only the newest messages loading
-    /// clears that, so a turn's steps arriving never hides a conversation that did not load.
-    private func load(_ fetch: (_ coordinator: String) async throws -> Void) async {
-        guard let coordinator else { return }
-        do {
-            try await fetch(coordinator.id)
-        } catch {
-            failure = error.localizedDescription
-        }
+        guard let coordinator,
+              let newer = try? await host.connection.request(StepsCommand(sessionID: coordinator.id, after: turn?.revision ?? 0))
+        else { return }
+        turn = turn.map { $0.merging(newer) } ?? newer
     }
 }

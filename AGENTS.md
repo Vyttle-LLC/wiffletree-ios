@@ -39,6 +39,16 @@ The package tests reach no network: `Tests/WiffletreeKitTests/Support/` has an i
 
 CI (GitHub-hosted macOS) runs `swift test`, regenerates the project with XcodeGen 2.44.1 and fails on drift in `Wiffletree.xcodeproj`, then runs `xcodebuild build-for-testing`. Tests use Swift Testing (`@Test`, `#expect`).
 
+## Simulators
+
+Simulators use the Mac's resources until they are shut down, so never leave yours running when you finish.
+
+- Use one existing iOS Simulator device, picked by id (for example an iPhone 17 Pro on the newest installed iOS). Don't create a new device for each run. If you do create one, delete it when you're done (`xcrun simctl delete <id>`).
+- Boot it headless with `xcrun simctl boot <id>`, or let `xcodebuild test` boot it. Don't open Simulator.app unless you need screenshots.
+- When your work is done, shut down the simulator you booted, by id (`xcrun simctl shutdown <id>`), including one `xcodebuild test` booted for you. Leave other simulators alone, and never run `xcrun simctl shutdown all`: other agents may be using theirs.
+- Stop test runs cleanly. Don't `kill -9` xcodebuild, the test host or simulator services; that floods the Mac with "quit unexpectedly" reports.
+- Before reporting, check that nothing you started is still running (`xcrun simctl list devices booted`, `pgrep -fl xcodebuild`).
+
 ## Conventions
 
 - `Packages/WiffletreeKit/Tests/WiffletreeKitTests/Fixtures/pairing_vectors.json` is a byte-for-byte copy of the host's fixture; never edit it. If the host's vectors change, copy them again and update the source commit noted in `PairingVectorTests.swift`.

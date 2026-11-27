@@ -187,7 +187,7 @@ final class ProjectChat {
                 let uploaded = try await uploader.send(photo.upload) { @MainActor upload in self.update(upload) }
                 update(uploaded)
             } catch {
-                sendFailure = "Couldn't upload \(photo.upload.name): \(error.localizedDescription)"
+                sendFailure = "Couldn't upload \(photo.upload.name): \(host.failureText(error))"
                 return
             }
         }
@@ -204,7 +204,7 @@ final class ProjectChat {
             if !messages.contains(where: { $0.id == sent.id }) { messages.append(sent) }
         } catch {
             unsent = command
-            sendFailure = error.localizedDescription
+            sendFailure = host.failureText(error)
         }
     }
 

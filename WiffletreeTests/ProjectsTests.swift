@@ -440,6 +440,30 @@ struct ProjectChatTests {
         #expect(chat.messages.count == 7)
     }
 
+    @Test func aSendIsPendingUntilItFailsNamingTheMacAndKeepingTheDraft() async throws {
+        let held = AsyncStream<Void>.makeStream()
+        let connection = FakeConnection(held: held.stream)
+        let studio = PairedHost.fake("Studio Mac")
+        let host = LiveHost(id: .paired(studio.id), paired: studio, lastSeen: nil, connect: { connection })
+        connection.yield(.connected(address: HostAddress(host: "studio.local"), level: .control))
+        try await eventually { host.snapshot != nil }
+        let chat = ProjectChat(host: host, projectID: "p")
+        connection.failure = .notConnected
+
+        chat.draft = "Ship it"
+        let sending = Task { await chat.send() }
+        try await eventually { chat.isSending }
+        #expect(!chat.canSend)
+        #expect(chat.sendFailure == nil)
+
+        held.continuation.finish()
+        await sending.value
+        #expect(!chat.isSending)
+        #expect(chat.sendFailure == "Not connected to Studio Mac. Try again.")
+        #expect(chat.draft == "Ship it")
+        #expect(chat.canSend)
+    }
+
     @Test func anEmptyDraftCannotBeSent() async throws {
         let chat = ProjectChat(host: try await demoHost(), projectID: Seed.tideAlerts)
         chat.draft = "  \n "

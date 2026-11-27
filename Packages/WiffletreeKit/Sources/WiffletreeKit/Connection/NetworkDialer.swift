@@ -127,6 +127,11 @@ final class NetworkChannel: MessageChannel {
 
     init(connection: NWConnection) {
         self.connection = connection
+        // A path that can no longer carry data, such as Wi-Fi gone, holds sends and reads
+        // silently; dropping it now lets the client reconnect and say so at once.
+        connection.viabilityUpdateHandler = { [weak connection] isViable in
+            if !isViable { connection?.forceCancel() }
+        }
     }
 
     func send(_ text: String) async throws(ConnectionError) {
@@ -156,8 +161,10 @@ final class NetworkChannel: MessageChannel {
         }
     }
 
+    /// Drops the connection without sending what is still queued: a request the client has
+    /// given up on must not reach the host minutes later, when a stalled link recovers.
     func close() {
-        connection.cancel()
+        connection.forceCancel()
     }
 
     private enum Frame: Sendable {

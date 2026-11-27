@@ -130,6 +130,40 @@ struct InboxModelTests {
         #expect(model.open.map(\.id) == ["a0"])
     }
 
+    @Test func anAnswerWhileNotConnectedSaysSoOnItsCardAndStaysOpen() async throws {
+        let connection = FakeConnection(snapshot: .with(open: 1))
+        let studio = PairedHost.fake("Studio Mac")
+        let host = LiveHost(id: .paired(studio.id), paired: studio, lastSeen: nil, connect: { connection })
+        connection.yield(.connected(address: HostAddress(host: "studio.local"), level: .control))
+        try await eventually { host.snapshot != nil }
+        let model = InboxModel(host: host)
+
+        connection.failure = .notConnected
+        await model.answer(try item("a0", in: model), with: "Yes")
+        #expect(model.errors["a0"] == "Not connected to Studio Mac. Try again.")
+        #expect(model.open.map(\.id) == ["a0"])
+        #expect(model.sending.isEmpty)
+    }
+
+    @Test func theConnectionNoticeSaysWhetherItIsReconnectingOrStopped() async throws {
+        let connection = FakeConnection()
+        let studio = PairedHost.fake("Studio Mac")
+        let host = LiveHost(id: .paired(studio.id), paired: studio, lastSeen: nil, connect: { connection })
+        #expect(host.connectionNotice == ConnectionNotice(text: "Connecting to Studio Mac…", isRetrying: true))
+
+        connection.yield(.connected(address: HostAddress(host: "studio.local"), level: .control))
+        try await eventually { host.connectionNotice == nil }
+
+        connection.yield(.waiting(attempt: 1, error: .closed))
+        try await eventually { host.connectionNotice == ConnectionNotice(text: "Reconnecting to Studio Mac…", isRetrying: true) }
+        connection.yield(.connecting)
+        try await eventually { host.state == .connecting }
+        #expect(host.connectionNotice == ConnectionNotice(text: "Reconnecting to Studio Mac…", isRetrying: true))
+
+        connection.yield(.failed(.keyChanged))
+        try await eventually { host.connectionNotice == ConnectionNotice(text: "Not connected to Studio Mac", isRetrying: false) }
+    }
+
     @Test func aMergeIntoAProtectedBranchOpensGitHub() throws {
         let json = #"""
         {"projects": [{"id": "p", "name": "Tide alerts"}], "sessions": [],

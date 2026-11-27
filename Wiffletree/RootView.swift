@@ -3,6 +3,7 @@ import SwiftUI
 /// First run until a host is chosen, then that host's tabs.
 struct RootView: View {
     @Environment(AppModel.self) private var app
+    @Environment(\.scenePhase) private var scenePhase
     @State private var isPairingAgain = false
 
     var body: some View {
@@ -25,5 +26,8 @@ struct RootView: View {
             Text("\(notice.reason) This iPhone has forgotten it.")
         }
         .pairingFlow(isPresented: $isPairingAgain, start: .addHost)
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { app.returnedToForeground() }
+        }
     }
 }

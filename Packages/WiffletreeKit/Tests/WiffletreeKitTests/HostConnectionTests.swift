@@ -49,7 +49,9 @@ struct RemoteHostConnectionTests {
     private func connect(
         addresses: [String: FakeDialer.Behaviour] = ["studio.local": .answer],
         heartbeat: Duration = .seconds(3600),
-        backoff: Duration = .milliseconds(1)
+        backoff: Duration = .milliseconds(1),
+        connectingLimit: Duration = .seconds(30),
+        dialer: FakeDialer? = nil
     ) async -> RemoteHostConnection {
         await host.pairDevice(device)
         let paired = PairedHost(
@@ -64,9 +66,10 @@ struct RemoteHostConnectionTests {
         options.heartbeat = heartbeat
         options.pingLimit = .milliseconds(50)
         options.headStart = .milliseconds(10)
+        options.connectingLimit = connectingLimit
         return RemoteHostConnection(
             host: paired, deviceKey: device, store: store, appVersion: "1.0",
-            dialer: FakeDialer(addresses, host: host), options: options
+            dialer: dialer ?? FakeDialer(addresses, host: host), options: options
         )
     }
 
@@ -107,23 +110,72 @@ struct RemoteHostConnectionTests {
         }
     }
 
-    @Test func aRequestWhileWaitingThrowsTheReasonAtOnce() async throws {
+    @Test func aRequestWhileWaitingFailsAtOnceAndTheStateSaysWhy() async throws {
         let connection = await connect(addresses: ["192.168.1.20": .fail], backoff: .seconds(30))
         defer { connection.close() }
-        let reason = ConnectionError.unreachable("192.168.1.20 did not answer")
-        await #expect(throws: reason) { try await connection.request(PingCommand()) }
+        await #expect(throws: ConnectionError.notConnected) { try await connection.request(PingCommand()) }
         let asked = ContinuousClock.now
-        await #expect(throws: reason) { try await connection.request(PingCommand()) }
+        await #expect(throws: ConnectionError.notConnected) { try await connection.request(PingCommand()) }
         #expect(ContinuousClock.now - asked < .seconds(5))
+        #expect(await connection.states.first { $0 != .connecting } == .waiting(attempt: 1, error: .unreachable("192.168.1.20 did not answer")))
+    }
+
+    @Test func aRequestDuringASlowTryFailsAfterTheConnectingLimit() async throws {
+        let connection = await connect(addresses: ["studio.local": .slow(.seconds(30))], connectingLimit: .milliseconds(100))
+        defer { connection.close() }
+        let asked = ContinuousClock.now
+        await #expect(throws: ConnectionError.notConnected) { try await connection.request(PingCommand()) }
+        #expect(ContinuousClock.now - asked < .seconds(5))
+        #expect(await host.commands.isEmpty)
+    }
+
+    @Test func aRequestDuringATryThatConnectsInTimeIsSent() async throws {
+        let connection = await connect(addresses: ["studio.local": .slow(.milliseconds(50))], connectingLimit: .seconds(10))
+        defer { connection.close() }
+        _ = try await connection.request(PingCommand())
+        #expect(await host.commands.contains("ping"))
     }
 
     @Test func aRefusedSubscriptionFailsTheTry() async throws {
         await host.set(refusesSubscribe: true)
         let connection = await connect(backoff: .seconds(30))
         defer { connection.close() }
-        await #expect(throws: ConnectionError.commandFailed("No events today")) {
-            try await connection.request(PingCommand())
+        await #expect(throws: ConnectionError.notConnected) { try await connection.request(PingCommand()) }
+        #expect(await connection.states.first { $0 != .connecting } == .waiting(attempt: 1, error: .commandFailed("No events today")))
+    }
+
+    @Test func reconnectNowCutsTheBackoffShort() async throws {
+        let connection = await connect(backoff: .seconds(30))
+        defer { connection.close() }
+        _ = try await connection.request(PingCommand())
+        var states = connection.states.makeAsyncIterator()
+        await host.dropConnections()
+        while let state = await states.next() {
+            if case .waiting = state { break }
         }
+        let woken = ContinuousClock.now
+        connection.reconnectNow()
+        while let state = await states.next() {
+            if case .connected = state { break }
+        }
+        #expect(ContinuousClock.now - woken < .seconds(5))
+    }
+
+    @Test func reconnectNowDropsAConnectionThatDiedUnnoticed() async throws {
+        let connection = await connect()
+        defer { connection.close() }
+        _ = try await connection.request(PingCommand())
+        await host.set(ignoresPings: true)
+        var states = connection.states.makeAsyncIterator()
+        connection.reconnectNow()
+        while let state = await states.next() {
+            if case .waiting(_, .closed) = state { break }
+        }
+        await host.set(ignoresPings: false)
+        while let state = await states.next() {
+            if case .connected = state { break }
+        }
+        #expect(await host.commands.filter { $0 == "subscribe" }.count == 2)
     }
 
     @Test func resumesEventsFromTheCursorAfterADrop() async throws {
@@ -171,6 +223,21 @@ struct RemoteHostConnectionTests {
             if case .connected = state { break }
         }
         #expect(await host.commands.filter { $0 == "subscribe" }.count >= 2)
+    }
+
+    @Test func anEndedSessionClosesItsChannel() async throws {
+        let dialer = FakeDialer(["studio.local": .answer], host: host)
+        let connection = await connect(backoff: .seconds(30), dialer: dialer)
+        defer { connection.close() }
+        _ = try await connection.request(PingCommand())
+        var states = connection.states.makeAsyncIterator()
+        await host.dropConnections()
+        while let state = await states.next() {
+            if case .waiting = state { break }
+        }
+        let channel = try #require(dialer.opened.withLock { $0.first })
+        for _ in 0..<100 where channel.closes == 0 { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(channel.closes == 1)
     }
 
     @Test func aRemovedDeviceStopsWithUnpaired() async throws {

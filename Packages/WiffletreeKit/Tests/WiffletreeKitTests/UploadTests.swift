@@ -117,6 +117,14 @@ struct UploadTests {
         #expect(host.held.withLock { $0 } == data)
     }
 
+    @Test func aPieceSentWhileReconnectingGoesAgainOnceTheHostIsBack() async throws {
+        let data = file(Upload.pieceLimit + 1)
+        let host = FakeStore(fail: { $0 <= 2 ? .notConnected : nil })
+        let done = try await host.uploader().send(Upload(name: "a.jpg", data: data))
+        #expect(done.isComplete)
+        #expect(host.held.withLock { $0 } == data)
+    }
+
     @Test func aHostThatStaysAwayEndsTheUploadAfterItsPatience() async throws {
         let host = FakeStore(fail: { _ in .unreachable("No route to host") })
         await #expect(throws: ConnectionError.unreachable("No route to host")) {

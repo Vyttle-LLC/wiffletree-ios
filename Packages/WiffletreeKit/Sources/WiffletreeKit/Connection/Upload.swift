@@ -99,7 +99,7 @@ extension ConnectionError {
     /// again once it is back.
     var isLost: Bool {
         switch self {
-        case .closed, .timedOut, .unreachable: true
+        case .closed, .timedOut, .unreachable, .notConnected: true
         default: false
         }
     }

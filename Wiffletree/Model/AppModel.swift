@@ -116,6 +116,12 @@ final class AppModel {
 
     // MARK: - Connections
 
+    /// The app is active again, perhaps after the background, where iOS may have suspended or
+    /// dropped the connections: each host tries again now, or checks its connection still works.
+    func returnedToForeground() {
+        hosts.forEach { $0.connection.reconnectNow() }
+    }
+
     private func live(_ host: PairedHost) -> LiveHost {
         let id = host.id
         let preferences = dependencies.preferences

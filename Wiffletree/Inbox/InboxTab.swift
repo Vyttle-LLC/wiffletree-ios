@@ -31,6 +31,8 @@ private struct InboxScreen: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            ConnectionBanner(host: model.host)
+                .padding(.bottom, 4)
             Picker("Show", selection: $section) {
                 Text("Needs you · \(model.open.count)").tag(Section.needsYou)
                 Text("Answered").tag(Section.answered)

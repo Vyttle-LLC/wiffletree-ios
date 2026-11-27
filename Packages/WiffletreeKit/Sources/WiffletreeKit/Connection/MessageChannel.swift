@@ -51,6 +51,9 @@ public enum ConnectionError: Error, Equatable, Sendable {
     case unexpectedMessage(String)
     /// The connection closed or dropped.
     case closed
+    /// A request found no connection: the host is unreachable for now, or the try in progress
+    /// did not connect in time. Nothing was sent.
+    case notConnected
     /// A step waited too long for the host.
     case timedOut
 }
@@ -67,6 +70,7 @@ extension ConnectionError: LocalizedError {
         case .incompatible(let version): "The host runs Wiffletree \(version), which this app cannot talk to."
         case .unexpectedMessage(let detail): "The host sent an unexpected message: \(detail)"
         case .closed: "The connection to the host closed."
+        case .notConnected: "Not connected to the host. Try again."
         case .timedOut: "The host took too long to answer."
         }
     }

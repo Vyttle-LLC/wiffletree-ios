@@ -10,8 +10,12 @@ public protocol HostConnection: Sendable {
     /// The connection's state each time it changes, starting with `connecting`.
     var states: AsyncStream<ConnectionState> { get }
     /// Sends a command once connected and returns the host's reply. While the host cannot be
-    /// reached, it throws the reason rather than waiting for the next try.
+    /// reached it throws `notConnected` rather than waiting for the next try, and while a try is
+    /// in progress it waits only briefly for it.
     func request<Command: HostCommand>(_ command: Command) async throws -> Command.Reply
+    /// The app is back in the foreground: try again now if waiting, else check the connection
+    /// survived the time the app was suspended.
+    func reconnectNow()
     /// Ends the connection and both streams for good.
     func close()
     /// Whether this is the built-in demo host, which the app marks as such.
@@ -20,6 +24,7 @@ public protocol HostConnection: Sendable {
 
 extension HostConnection {
     public var isDemo: Bool { false }
+    public func reconnectNow() {}
 }
 
 public enum ConnectionState: Equatable, Sendable {
@@ -57,9 +62,12 @@ public final class RemoteHostConnection: HostConnection {
         public var backoff = Backoff()
         /// How often a `ping` checks the host is still there, which a dead Wi-Fi link would
         /// otherwise hide.
-        public var heartbeat: Duration = .seconds(20)
+        public var heartbeat: Duration = .seconds(10)
         /// How long a `ping` may wait before the connection counts as dropped.
         public var pingLimit: Duration = .seconds(10)
+        /// How long a request made during a try waits for it to connect before it fails with
+        /// `notConnected`, so a tap is never held for the whole handshake.
+        public var connectingLimit: Duration = .seconds(8)
         /// How far each address's try starts after the one before it.
         public var headStart: Duration = .milliseconds(250)
 
@@ -83,8 +91,12 @@ public final class RemoteHostConnection: HostConnection {
         var session: HostSession?
         var cursor: Cursor?
         /// Requests waiting for the try in progress.
-        var waiters: [CheckedContinuation<HostSession, any Error>] = []
+        var waiters: [UUID: CheckedContinuation<HostSession, any Error>] = [:]
         var runner: Task<Void, Never>?
+        /// The pause before the next try, which `reconnectNow` cuts short.
+        var pause: Task<Void, Never>?
+        /// `reconnectNow` came with no session and no pause yet: skip the next pause.
+        var retryNow = false
     }
 
     /// Starts connecting at once. Call `close()` when done; until then the connection keeps
@@ -122,6 +134,18 @@ public final class RemoteHostConnection: HostConnection {
         try await currentSession().request(command)
     }
 
+    public func reconnectNow() {
+        let (session, pause) = shared.withLock { shared in
+            if shared.session == nil && shared.pause == nil { shared.retryNow = true }
+            return (shared.session, shared.pause)
+        }
+        pause?.cancel()
+        guard let session else { return }
+        Task { [pingLimit = options.pingLimit] in
+            _ = try? await session.request(PingCommand(), within: pingLimit)
+        }
+    }
+
     public func close() {
         let (runner, session) = shared.withLock { ($0.runner, $0.session) }
         runner?.cancel()
@@ -153,11 +177,27 @@ public final class RemoteHostConnection: HostConnection {
                 return
             }
             attempt += 1
-            settle(.waiting(attempt: attempt, error: error), waitersGet: .failure(error))
-            try? await Task.sleep(for: options.backoff.delay(after: attempt))
+            settle(.waiting(attempt: attempt, error: error), waitersGet: .failure(.notConnected))
+            await pause(for: options.backoff.delay(after: attempt))
             if Task.isCancelled { return }
             settle(.connecting, waitersGet: nil)
         }
+    }
+
+    /// Waits `delay` before the next try, or less when `reconnectNow` or `close` cuts it short.
+    private func pause(for delay: Duration) async {
+        let pause = Task<Void, Never> { try? await Task.sleep(for: delay) }
+        shared.withLock { shared in
+            if shared.retryNow { pause.cancel() }
+            shared.retryNow = false
+            shared.pause = pause
+        }
+        await withTaskCancellationHandler {
+            await pause.value
+        } onCancel: {
+            pause.cancel()
+        }
+        shared.withLock { $0.pause = nil }
     }
 
     /// Races the host's addresses, answers the challenge, says `Hello` and subscribes after the
@@ -188,8 +228,9 @@ public final class RemoteHostConnection: HostConnection {
             shared.host = updated
             shared.session = session
             shared.state = connected
-            defer { shared.waiters = [] }
-            return shared.waiters
+            shared.retryNow = false
+            defer { shared.waiters = [:] }
+            return Array(shared.waiters.values)
         }
         guard let waiters else {
             await session.close()
@@ -213,21 +254,33 @@ public final class RemoteHostConnection: HostConnection {
         }
     }
 
-    /// The session to send on: the live one, the one being opened, or the reason there is none.
+    /// The session to send on: the live one, the one being opened if it opens within
+    /// `connectingLimit`, or the reason there is none.
     private func currentSession() async throws -> HostSession {
-        try await withCheckedThrowingContinuation { continuation in
+        let waiter = UUID()
+        return try await withCheckedThrowingContinuation { continuation in
             let ready: Result<HostSession, ConnectionError>? = shared.withLock { shared in
                 if let session = shared.session { return .success(session) }
                 switch shared.state {
-                case .failed(let error), .waiting(_, let error): return .failure(error)
+                case .failed(let error): return .failure(error)
+                case .waiting: return .failure(.notConnected)
                 case .closed: return .failure(.closed)
                 case .connecting, .connected:
-                    shared.waiters.append(continuation)
+                    shared.waiters[waiter] = continuation
                     return nil
                 }
             }
-            if let ready { continuation.resume(with: ready.mapError { $0 }) }
+            if let ready { return continuation.resume(with: ready.mapError { $0 }) }
+            Task { [weak self, limit = options.connectingLimit] in
+                try? await Task.sleep(for: limit)
+                self?.giveUp(on: waiter)
+            }
         }
+    }
+
+    /// Fails a request still waiting for the try in progress.
+    private func giveUp(on waiter: UUID) {
+        shared.withLock { $0.waiters.removeValue(forKey: waiter) }?.resume(throwing: ConnectionError.notConnected)
     }
 
     /// Moves to `state`, telling waiting requests why when `waitersGet` says so.
@@ -236,8 +289,8 @@ public final class RemoteHostConnection: HostConnection {
             guard shared.state != .closed else { return nil }
             shared.state = state
             guard result != nil else { return [] }
-            defer { shared.waiters = [] }
-            return shared.waiters
+            defer { shared.waiters = [:] }
+            return Array(shared.waiters.values)
         }
         guard let waiters else { return }
         stateSink.yield(state)

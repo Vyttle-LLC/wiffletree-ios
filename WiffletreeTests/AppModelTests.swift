@@ -88,6 +88,13 @@ struct AppModelTests {
         #expect(harness.preferences.lastSeen(studio.id) != nil)
     }
 
+    @Test func returningToTheForegroundReconnectsEveryPairedHost() throws {
+        let harness = Harness([studio, office])
+        harness.app.returnedToForeground()
+        #expect(try harness.connection(studio).reconnects == 1)
+        #expect(try harness.connection(office).reconnects == 1)
+    }
+
     @Test func aClosedProjectsInboxItemsAreNotCounted() async throws {
         let harness = Harness([studio])
         let host = try #require(harness.app.selected)

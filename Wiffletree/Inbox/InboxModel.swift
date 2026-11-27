@@ -117,7 +117,7 @@ final class InboxModel {
             _ = try await request(host.connection)
             decide(item, outcome, at: now())
         } catch {
-            errors[item.id] = error.localizedDescription
+            errors[item.id] = host.failureText(error)
         }
     }
 

@@ -30,6 +30,17 @@ struct InboxCard: View {
                 actions
                     .padding(.top, 12)
                     .disabled(isSending)
+                    .opacity(isSending ? 0.5 : 1)
+            }
+            if isSending {
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .controlSize(.mini)
+                    Text("Sending to \(model.host.name)…")
+                }
+                .font(.footnote)
+                .foregroundStyle(Tidal.subtle)
+                .padding(.top, 8)
             }
             if let error = model.errors[item.id] {
                 Label(error, systemImage: "exclamationmark.triangle")

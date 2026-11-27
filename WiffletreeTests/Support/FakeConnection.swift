@@ -9,16 +9,22 @@ final class FakeConnection: HostConnection {
     let states: AsyncStream<ConnectionState>
     private let eventSink: AsyncStream<HostEvent>.Continuation
     private let stateSink: AsyncStream<ConnectionState>.Continuation
-    private let shared: Mutex<(snapshot: Snapshot, isClosed: Bool)>
+    private let shared: Mutex<(snapshot: Snapshot, isClosed: Bool, reconnects: Int, failure: ConnectionError)>
 
     init(snapshot: Snapshot = .with(open: 0)) {
         (events, eventSink) = AsyncStream.makeStream()
         (states, stateSink) = AsyncStream.makeStream()
-        shared = Mutex((snapshot, false))
+        shared = Mutex((snapshot, false, 0, .commandFailed("Not faked")))
         stateSink.yield(.connecting)
     }
 
     var isClosed: Bool { shared.withLock { $0.isClosed } }
+    /// How many times the app asked to reconnect now.
+    var reconnects: Int { shared.withLock { $0.reconnects } }
+
+    func reconnectNow() {
+        shared.withLock { $0.reconnects += 1 }
+    }
 
     func set(_ snapshot: Snapshot) {
         shared.withLock { $0.snapshot = snapshot }
@@ -32,8 +38,14 @@ final class FakeConnection: HostConnection {
         eventSink.yield(HostEvent(cursor: Cursor(epoch: "test", seq: 1), kind: kind))
     }
 
+    /// What every request other than `snapshot` throws.
+    var failure: ConnectionError {
+        get { shared.withLock { $0.failure } }
+        set { shared.withLock { $0.failure = newValue } }
+    }
+
     func request<Command: HostCommand>(_ command: Command) async throws -> Command.Reply {
-        guard command is SnapshotCommand else { throw ConnectionError.commandFailed("Not faked") }
+        guard command is SnapshotCommand else { throw failure }
         return shared.withLock { $0.snapshot } as! Command.Reply
     }
 

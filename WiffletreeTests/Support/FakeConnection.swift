@@ -10,8 +10,12 @@ final class FakeConnection: HostConnection {
     private let eventSink: AsyncStream<HostEvent>.Continuation
     private let stateSink: AsyncStream<ConnectionState>.Continuation
     private let shared: Mutex<(snapshot: Snapshot, isClosed: Bool, reconnects: Int, failure: ConnectionError)>
+    private let held: AsyncStream<Void>?
 
-    init(snapshot: Snapshot = .with(open: 0)) {
+    /// - Parameter held: When given, a request other than `snapshot` fails only once this
+    ///   yields or ends.
+    init(snapshot: Snapshot = .with(open: 0), held: AsyncStream<Void>? = nil) {
+        self.held = held
         (events, eventSink) = AsyncStream.makeStream()
         (states, stateSink) = AsyncStream.makeStream()
         shared = Mutex((snapshot, false, 0, .commandFailed("Not faked")))
@@ -45,7 +49,10 @@ final class FakeConnection: HostConnection {
     }
 
     func request<Command: HostCommand>(_ command: Command) async throws -> Command.Reply {
-        guard command is SnapshotCommand else { throw failure }
+        guard command is SnapshotCommand else {
+            if let held { for await _ in held { break } }
+            throw failure
+        }
         return shared.withLock { $0.snapshot } as! Command.Reply
     }
 

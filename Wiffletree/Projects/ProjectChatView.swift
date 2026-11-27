@@ -47,6 +47,7 @@ private struct ChatContent: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            ConnectionBanner(host: host)
             if let overview = chat.overview, !overview.tickets.isEmpty {
                 PinnedTickets(overview: overview)
                     .padding(.horizontal, 16)
@@ -413,6 +414,7 @@ private struct WorkingBar: View {
 /// The reply field with photos, dictation and send. Send is dimmed until there is text or a
 /// photo; the + is there only when the host takes photos from this iPhone.
 private struct Composer: View {
+    @Environment(LiveHost.self) private var host
     @Bindable var chat: ProjectChat
     let isViewOnly: Bool
     let isDemo: Bool
@@ -518,11 +520,19 @@ private struct Composer: View {
         }
         .disabled(isViewOnly)
 
-        RoundButton(systemImage: "arrow.up", filled: chat.canSend, label: "Send") {
-            dictation.cancel()
-            Task { await chat.send() }
+        if chat.isSending {
+            ProgressView()
+                .tint(Tidal.accent)
+                .frame(width: 38, height: 38)
+                .background(Tidal.tintAccent, in: .circle)
+                .accessibilityLabel("Sending to \(host.name)…")
+        } else {
+            RoundButton(systemImage: "arrow.up", filled: chat.canSend, label: "Send") {
+                dictation.cancel()
+                Task { await chat.send() }
+            }
+            .disabled(!chat.canSend || isViewOnly)
         }
-        .disabled(!chat.canSend || isViewOnly)
     }
 
     private var placeholder: String {

@@ -13,6 +13,16 @@ private func eventually(_ condition: () -> Bool) async throws {
     #expect(condition())
 }
 
+/// Waits for the demo to reach a state only a request can read.
+@MainActor
+private func eventuallyAsync(_ condition: () async throws -> Bool) async throws {
+    for _ in 0..<200 {
+        if try await condition() { return }
+        try await Task.sleep(for: .milliseconds(10))
+    }
+    #expect(try await condition())
+}
+
 /// The demo host as Home sees it, with replies that come when `sleep` lets them.
 @MainActor
 private func demoHost(sleep: @escaping @Sendable (Duration) async throws -> Void = { _ in }) async throws -> LiveHost {
@@ -26,6 +36,7 @@ private func demoHost(sleep: @escaping @Sendable (Duration) async throws -> Void
 /// Ids of the demo seed, which the app's tests cannot reach as `DemoID`.
 private enum Seed {
     static let tideAlerts = "demo-tide-alerts"
+    static let tideCoordinator = "demo-tide-coordinator"
     static let stationMap = "demo-station-map"
     static let legacyImporter = "demo-legacy-importer"
 }
@@ -46,11 +57,52 @@ private final class RecordingConnection: HostConnection {
 
     func request<Command: HostCommand>(_ command: Command) async throws -> Command.Reply {
         if let steps = command as? StepsCommand { log.withLock { $0.append("steps after \(steps.after)") } }
-        if command is MessagesCommand { log.withLock { $0.append("messages") } }
+        if let messages = command as? MessagesCommand {
+            log.withLock { $0.append(messages.before.map { "messages before \($0)" } ?? "messages") }
+        }
         return try await demo.request(command)
     }
 
     func close() {
+        demo.close()
+    }
+}
+
+/// The demo host failing its next `messages` reads, as a host does while the connection is down,
+/// with events the test sends instead of the demo's.
+private final class FlakyConnection: HostConnection {
+    let events: AsyncStream<HostEvent>
+    private let eventSink: AsyncStream<HostEvent>.Continuation
+    private let demo = DemoHostConnection()
+    private let failingReads: Mutex<Int>
+
+    init(failingReads: Int = 1) {
+        (events, eventSink) = AsyncStream.makeStream()
+        self.failingReads = Mutex(failingReads)
+    }
+
+    func failNextRead() {
+        failingReads.withLock { $0 = 1 }
+    }
+
+    var states: AsyncStream<ConnectionState> { demo.states }
+    var isDemo: Bool { true }
+
+    func yield(_ kind: HostEvent.Kind) {
+        eventSink.yield(HostEvent(cursor: Cursor(epoch: "test", seq: 1), kind: kind))
+    }
+
+    func request<Command: HostCommand>(_ command: Command) async throws -> Command.Reply {
+        let fails = command is MessagesCommand && failingReads.withLock { left in
+            defer { left = max(left - 1, 0) }
+            return left > 0
+        }
+        if fails { throw ConnectionError.closed }
+        return try await demo.request(command)
+    }
+
+    func close() {
+        eventSink.finish()
         demo.close()
     }
 }
@@ -175,6 +227,217 @@ struct ProjectChatTests {
         #expect(recording.sent.filter { $0 == "messages" }.count == 3)
         #expect(recording.sent.filter { $0.hasPrefix("steps") } == ["steps after 0", "steps after 0", "steps after \(started)"])
         #expect(chat.turn?.narration.map(\.text) == chat.messages.last.map { [$0.body] })
+    }
+
+    /// Tide alerts' seeded conversation holds 7 messages; a page of 3 shows the newest 3.
+    @Test func loadEarlierAsksForThePageBeforeTheOldestLoadedMessage() async throws {
+        let recording = RecordingConnection(DemoHostConnection())
+        let host = LiveHost(id: .demo, paired: nil, lastSeen: nil, connect: { recording })
+        try await eventually { host.snapshot != nil }
+        let chat = ProjectChat(host: host, projectID: Seed.tideAlerts, pageSize: 3)
+        let running = Task { await chat.run() }
+        defer { running.cancel() }
+        try await eventually { chat.turn != nil }
+        #expect(chat.messages.count == 3)
+        #expect(chat.hasEarlier)
+
+        let oldest = try #require(chat.messages.first)
+        await chat.loadEarlier()
+        #expect(recording.sent.last == "messages before \(oldest.sequence)")
+        #expect(chat.messages.count == 6)
+        #expect(chat.hasEarlier)
+
+        await chat.loadEarlier()
+        #expect(chat.messages.count == 7)
+        #expect(!chat.hasEarlier)
+        #expect(chat.messages.map(\.sequence) == chat.messages.map(\.sequence).sorted())
+        #expect(chat.messages.first?.body.hasPrefix("Welcome to the demo.") == true)
+    }
+
+    /// The bug from the iPhone: each change replaced the conversation with the newest page, so
+    /// older messages vanished as it grew.
+    @Test func theNewestPageMergesWithoutDroppingEarlierMessages() async throws {
+        let host = try await demoHost()
+        let chat = ProjectChat(host: host, projectID: Seed.tideAlerts, pageSize: 3)
+        let running = Task { await chat.run() }
+        defer { running.cancel() }
+        try await eventually { chat.messages.count == 3 }
+        await chat.loadEarlier()
+        await chat.loadEarlier()
+        let loaded = chat.messages.map(\.id)
+        #expect(loaded.count == 7)
+
+        for body in ["One", "Two"] {
+            chat.draft = body
+            await chat.send()
+            try await eventually { chat.messages.last?.kind == .reply }
+        }
+        try await eventually { chat.messages.count == 11 }
+        #expect(Array(chat.messages.map(\.id).prefix(7)) == loaded)
+        #expect(chat.messages.suffix(4).map(\.kind) == [.human, .reply, .human, .reply])
+        #expect(Set(chat.messages.map(\.id)).count == 11)
+        #expect(!chat.hasEarlier)
+    }
+
+    /// More messages arrive than a page holds while the chat is not reading them, then the person
+    /// sends. The sent message must not make the next newest page look continuous with the old
+    /// history: the page starts the history again, and "Load earlier" reaches every message.
+    @Test func aSendBeforeARefreshLeavesNoHoleInTheHistory() async throws {
+        let host = try await demoHost()
+        let chat = ProjectChat(host: host, projectID: Seed.tideAlerts, pageSize: 3)
+        await chat.reloadAll()
+        #expect(chat.messages.count == 3)
+
+        func everything() async throws -> [String] {
+            try await host.connection.request(MessagesCommand(sessionID: Seed.tideCoordinator, limit: 100)).map(\.id)
+        }
+        for body in ["Unseen one", "Unseen two"] {
+            _ = try await host.connection.request(SendCommand(recipient: Seed.tideCoordinator, body: body))
+        }
+        try await eventuallyAsync { try await everything().count == 11 }
+        chat.draft = "Mine"
+        await chat.send()
+        try await eventuallyAsync { try await everything().count == 13 }
+
+        await chat.reloadAll()
+        #expect(chat.messages.count == 3)
+        while chat.hasEarlier { await chat.loadEarlier() }
+        #expect(chat.messages.map(\.id) == (try await everything()))
+    }
+
+    /// A restart drops the snapshot; the conversation stays on screen and refreshes once the
+    /// coordinator is back, as the view runs the chat again.
+    @Test func aRestartKeepsTheHistoryVisible() async throws {
+        let host = try await demoHost()
+        let chat = ProjectChat(host: host, projectID: Seed.tideAlerts)
+        var running = Task { await chat.run() }
+        try await eventually { chat.turn != nil }
+        chat.draft = "Before the restart"
+        await chat.send()
+        try await eventually { chat.messages.last?.kind == .reply }
+        let loaded = chat.messages.map(\.id)
+        #expect(loaded.count == 9)
+
+        host.restart()
+        await running.value
+        #expect(chat.coordinator == nil)
+        #expect(chat.messages.map(\.id) == loaded)
+
+        try await eventually { chat.coordinator != nil }
+        running = Task { await chat.run() }
+        defer { running.cancel() }
+        // The restarted demo starts over from its seed, which the refresh shows.
+        try await eventually { chat.messages.count == 7 }
+        #expect(chat.messages.map(\.id) == Array(loaded.prefix(7)))
+    }
+
+    /// The blank chat from the iPhone: the conversation failed to load while the connection was
+    /// down, then the busy coordinator's steps loaded and cleared the error, leaving no messages
+    /// and nothing saying why.
+    @Test func aFailedLoadStaysShownUntilTheMessagesLoad() async throws {
+        let flaky = FlakyConnection()
+        let host = LiveHost(id: .demo, paired: nil, lastSeen: nil, connect: { flaky })
+        try await eventually { host.snapshot != nil }
+        let chat = ProjectChat(host: host, projectID: Seed.tideAlerts)
+        let running = Task { await chat.run() }
+        defer { running.cancel() }
+        try await eventually { chat.failure != nil }
+        #expect(chat.messages.isEmpty)
+        #expect(!chat.hasLoaded)
+
+        flaky.yield(.steps(sessions: [Seed.tideCoordinator]))
+        try await eventually { chat.turn != nil }
+        #expect(chat.failure != nil)
+
+        await chat.reloadAll()
+        #expect(chat.failure == nil)
+        #expect(chat.hasLoaded)
+        #expect(!chat.messages.isEmpty)
+    }
+
+    @Test func reopeningAChatShowsTheHistoryItLoaded() async throws {
+        let host = try await demoHost()
+        let chat = host.chat(of: Seed.tideAlerts)
+        let running = Task { await chat.run() }
+        try await eventually { chat.hasLoaded }
+        let loaded = chat.messages.map(\.id)
+        running.cancel()
+        await running.value
+
+        host.restart()
+        let reopened = host.chat(of: Seed.tideAlerts)
+        #expect(reopened === chat)
+        #expect(reopened.messages.map(\.id) == loaded)
+        #expect(host.chat(of: Seed.stationMap) !== chat)
+    }
+
+    @Test func aLoadWhileDisconnectedShowsNoConversationError() async throws {
+        let fake = FakeConnection()
+        let host = LiveHost(id: .demo, paired: nil, lastSeen: nil, connect: { fake })
+        let address = HostAddress(host: "studio.local")
+        fake.yield(.connected(address: address, level: .control))
+        try await eventually { host.snapshot != nil }
+        let chat = ProjectChat(host: host, projectID: "p")
+
+        fake.yield(.waiting(attempt: 1, error: .unreachable("No address answered.")))
+        try await eventually { !host.isConnected }
+        await chat.reloadAll()
+        #expect(chat.failure == nil)
+
+        fake.yield(.connected(address: address, level: .control))
+        try await eventually { host.isConnected }
+        await chat.reloadAll()
+        #expect(chat.failure != nil)
+    }
+
+    @Test func beforeAnythingLoadsTheChatWaitsForAHostThatIsNotConnected() async throws {
+        let fake = FakeConnection()
+        let host = LiveHost(id: .demo, paired: nil, lastSeen: nil, connect: { fake })
+        let chat = host.chat(of: "p")
+        #expect(chat.isWaitingForHost)
+
+        fake.yield(.connected(address: HostAddress(host: "studio.local"), level: .control))
+        try await eventually { host.isConnected }
+        #expect(!chat.isWaitingForHost)
+
+        let demo = try await demoHost()
+        let loaded = demo.chat(of: Seed.tideAlerts)
+        await loaded.reloadAll()
+        demo.restart()
+        #expect(!demo.isConnected)
+        #expect(!loaded.isWaitingForHost)
+    }
+
+    @Test func aFailedLoadEarlierOffersItAgainWithoutTheConversationError() async throws {
+        let flaky = FlakyConnection(failingReads: 0)
+        let host = LiveHost(id: .demo, paired: nil, lastSeen: nil, connect: { flaky })
+        try await eventually { host.snapshot != nil }
+        let chat = ProjectChat(host: host, projectID: Seed.tideAlerts, pageSize: 3)
+        await chat.reloadAll()
+
+        flaky.failNextRead()
+        await chat.loadEarlier()
+        #expect(chat.earlierFailed)
+        #expect(chat.failure == nil)
+        #expect(chat.messages.count == 3)
+
+        await chat.loadEarlier()
+        #expect(!chat.earlierFailed)
+        #expect(chat.messages.count == 6)
+    }
+
+    /// Tide alerts' seeded conversation holds exactly a page of 7.
+    @Test func anEmptyEarlierPageEndsLoadEarlierAcrossReloads() async throws {
+        let host = try await demoHost()
+        let chat = ProjectChat(host: host, projectID: Seed.tideAlerts, pageSize: 7)
+        await chat.reloadAll()
+        #expect(chat.hasEarlier)
+
+        await chat.loadEarlier()
+        #expect(!chat.hasEarlier)
+        await chat.reloadAll()
+        #expect(!chat.hasEarlier)
+        #expect(chat.messages.count == 7)
     }
 
     @Test func anEmptyDraftCannotBeSent() async throws {

@@ -9,35 +9,33 @@ import WiffletreeKit
 struct ProjectChatView: View {
     @Environment(LiveHost.self) private var host
     let projectID: String
-    @State private var chat: ProjectChat?
     @State private var isShowingAgents = false
 
     var body: some View {
-        Group {
-            if let chat {
-                ChatContent(chat: chat, isShowingAgents: $isShowingAgents)
-            } else {
-                ProgressView()
+        ChatContent(chat: chat, isShowingAgents: $isShowingAgents)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Tidal.base)
+            .navigationTitle(chat.overview?.project.name ?? "")
+            .navigationSubtitle(subtitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                if host.isDemo {
+                    ToolbarItem(placement: .topBarTrailing) { DemoTag(size: .small) }
+                }
             }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Tidal.base)
-        .navigationTitle(chat?.overview?.project.name ?? "")
-        .navigationSubtitle(subtitle)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if host.isDemo {
-                ToolbarItem(placement: .topBarTrailing) { DemoTag(size: .small) }
+            .sheet(isPresented: $isShowingAgents) { AgentsSheet(projectID: projectID) }
+            // Runs while the host is connected, again once the snapshot names the coordinator,
+            // which a cold start may not yet, and again when the connection comes back,
+            // refreshing what is shown. While it is down, the cached history stays.
+            .task(id: [chat.coordinator?.id ?? "", host.isConnected ? "connected" : ""]) {
+                if host.isConnected { await chat.run() }
             }
-        }
-        .sheet(isPresented: $isShowingAgents) { AgentsSheet(projectID: projectID) }
-        .task { chat = chat ?? ProjectChat(host: host, projectID: projectID) }
-        // Runs again once the snapshot names the coordinator, which a cold start may not yet.
-        .task(id: [chat == nil ? "" : "chat", chat?.coordinator?.id ?? ""]) { await chat?.run() }
     }
 
+    private var chat: ProjectChat { host.chat(of: projectID) }
+
     private var subtitle: String {
-        guard let coordinator = chat?.coordinator else { return "" }
+        guard let coordinator = chat.coordinator else { return "" }
         return "Coordinator · \(coordinator.statusLabel.text.lowercased())"
     }
 }
@@ -57,6 +55,23 @@ private struct ChatContent: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 16) {
+                        if chat.isWaitingForHost {
+                            WaitingForHost(name: host.name, status: host.status)
+                        } else if !chat.hasLoaded && chat.failure == nil {
+                            ProgressView().frame(maxWidth: .infinity)
+                        }
+                        if chat.hasEarlier {
+                            LoadEarlier(isLoading: chat.isLoadingEarlier, failed: chat.earlierFailed) {
+                                let anchor = chat.messages.first?.id
+                                Task {
+                                    await chat.loadEarlier()
+                                    // Keeps the message that was at the top in view.
+                                    if let entry = chat.entries.first(where: { $0.messages.contains { $0.id == anchor } }) {
+                                        proxy.scrollTo(entry.id, anchor: .top)
+                                    }
+                                }
+                            }
+                        }
                         ForEach(chat.entries) { entry in
                             EntryView(chat: chat, entry: entry, coordinatorName: chat.overview?.project.name ?? "Coordinator")
                         }
@@ -68,15 +83,12 @@ private struct ChatContent: View {
                     .padding(16)
                 }
                 .defaultScrollAnchor(.bottom)
-                .onChange(of: chat.messages.count) { proxy.scrollTo(bottom) }
+                .onChange(of: chat.messages.last?.id) { proxy.scrollTo(bottom) }
                 .onChange(of: chat.liveNarration.last?.text) { proxy.scrollTo(bottom) }
             }
-            if let failure = chat.failure {
-                Text(failure)
-                    .font(.footnote)
-                    .foregroundStyle(Tidal.red)
+            if host.isConnected, let failure = chat.failure {
+                LoadFailure(text: failure) { Task { await chat.reloadAll() } }
                     .padding(.horizontal, 16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             WorkingBar(projectID: chat.projectID, isShowingAgents: $isShowingAgents)
             Composer(chat: chat, isViewOnly: host.level == .viewOnly, isDemo: host.isDemo)
@@ -122,6 +134,73 @@ private struct EntryView: View {
         let name = host.snapshot?.sessions.first { $0.id == sender }?.name ?? "An agent"
         // "Reviewer · Correctness" reads as "Reviewer" in the folded line.
         return name.components(separatedBy: " · ").first ?? name
+    }
+}
+
+/// Before anything has loaded, while the host is not connected: which Mac, and how it is reached.
+private struct WaitingForHost: View {
+    let name: String
+    let status: HostStatus
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ProgressView()
+            Text("Waiting for \(name)…")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Tidal.text)
+            Label(status.text, systemImage: status.systemImage)
+                .font(.footnote)
+                .foregroundStyle(Tidal.subtle)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 24)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Why the conversation did not load, with a retry.
+private struct LoadFailure: View {
+    let text: String
+    let retry: () -> Void
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Label("Couldn't load the conversation: \(text)", systemImage: "exclamationmark.circle")
+                .font(.footnote)
+                .foregroundStyle(Tidal.red)
+            Spacer(minLength: 8)
+            Button("Retry", action: retry)
+                .font(.footnote.weight(.semibold))
+                .tint(Tidal.accent)
+        }
+    }
+}
+
+/// Above the oldest loaded message while the host holds earlier ones; after a failed load it
+/// says so and offers it again.
+private struct LoadEarlier: View {
+    let isLoading: Bool
+    let failed: Bool
+    let load: () -> Void
+
+    var body: some View {
+        Group {
+            if isLoading {
+                ProgressView()
+            } else {
+                VStack(spacing: 4) {
+                    if failed {
+                        Text("Couldn't load earlier messages.")
+                            .font(.footnote)
+                            .foregroundStyle(Tidal.red)
+                    }
+                    Button(failed ? "Try again" : "Load earlier messages", action: load)
+                        .font(.footnote.weight(.semibold))
+                        .tint(Tidal.accent)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 

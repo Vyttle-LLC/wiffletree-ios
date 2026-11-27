@@ -64,6 +64,36 @@ struct FileLinkTests {
         #expect(chat.thumbnails[screenshot] != nil)
     }
 
+    @Test func onlyAFileTheHostResolvedOpens() async throws {
+        let chat = try await stationMapChat()
+        let link = FileLinks.url(for: mockup)
+        // Before the host has answered, not even the message's own file opens.
+        #expect(chat.openablePath(of: link) == nil)
+        await chat.resolveFiles(of: try linkingMessage(in: chat))
+
+        #expect(chat.openablePath(of: link) == mockup)
+        // A file link a message wrote itself skipped resolving and the check for files that run.
+        #expect(chat.openablePath(of: FileLinks.url(for: "/Users/demo/dev/tidepool/run.command")) == nil)
+        #expect(chat.openablePath(of: URL(string: "https://example.com/station-page.html")!) == nil)
+    }
+
+    @Test func aThumbnailIsTriedAgainAfterADropButNotAfterTheHostRefusesIt() async throws {
+        let connection = FakeConnection()
+        let host = LiveHost(id: .demo, paired: nil, lastSeen: nil, connect: { connection })
+        connection.yield(.connected(address: HostAddress(host: "studio.local"), level: .control, capabilities: ["files"]))
+        try await eventually { host.isConnected }
+        let chat = ProjectChat(host: host, projectID: "demo-station-map")
+
+        for dropped in [ConnectionError.notConnected, .closed, .timedOut] {
+            connection.failure = dropped
+            await chat.loadThumbnail(of: screenshot)
+            #expect(!chat.unreadable.contains(screenshot))
+        }
+        connection.failure = .commandFailed("No such file")
+        await chat.loadThumbnail(of: screenshot)
+        #expect(chat.unreadable.contains(screenshot))
+    }
+
     @Test func anOpenedFileIsATemporaryCopyThatGoesWhenClosed() async throws {
         let chat = try await stationMapChat()
         let copy = try await chat.copy(of: mockup)

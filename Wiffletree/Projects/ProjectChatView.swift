@@ -91,7 +91,8 @@ private struct ChatContent: View {
                 }
                 .defaultScrollAnchor(.bottom)
                 .environment(\.openURL, OpenURLAction { url in
-                    guard let path = FileLinks.path(of: url) else { return .systemAction }
+                    guard url.scheme == FileLinks.scheme else { return .systemAction }
+                    guard let path = chat.openablePath(of: url) else { return .discarded }
                     openedFile = OpenedFile(path: path)
                     return .handled
                 })
@@ -222,6 +223,7 @@ private struct LoadEarlier: View {
 /// A sent message's attachments: images as thumbnails, and any file the host cannot show as an
 /// image as a paperclip line naming it.
 private struct SentAttachments: View {
+    @Environment(LiveHost.self) private var host
     let chat: ProjectChat
     let attachments: [Attachment]
 
@@ -233,7 +235,7 @@ private struct SentAttachments: View {
                 HStack(spacing: 6) {
                     ForEach(images, id: \.path) { attachment in
                         Thumbnail(image: chat.thumbnails[attachment.path], name: attachment.name, side: 96)
-                            .task { await chat.loadThumbnail(of: attachment.path) }
+                            .task(id: host.isConnected) { await chat.loadThumbnail(of: attachment.path) }
                     }
                 }
             }

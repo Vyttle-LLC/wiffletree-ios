@@ -101,6 +101,7 @@ private struct QuickLookPreview: UIViewControllerRepresentable {
 /// Thumbnails of the images a message links to, at most `shown`, each opening the file. They
 /// load only while the message is on screen.
 struct LinkedImages: View {
+    @Environment(LiveHost.self) private var host
     @Environment(\.openURL) private var openURL
     let chat: ProjectChat
     let paths: [String]
@@ -116,7 +117,7 @@ struct LinkedImages: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint("Opens \(name)")
-                .task { await chat.loadThumbnail(of: path) }
+                .task(id: host.isConnected) { await chat.loadThumbnail(of: path) }
             }
             if paths.count > shown {
                 Text("+\(paths.count - shown) more")

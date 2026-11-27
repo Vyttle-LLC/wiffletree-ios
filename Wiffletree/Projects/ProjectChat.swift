@@ -58,6 +58,8 @@ struct MessageFiles {
     let markdown: String
     /// The linked images, in the order the message names them.
     let images: [String]
+    /// Every file the host resolved for the message, which only it may open.
+    let paths: Set<String>
 }
 
 /// A project's conversation with its coordinator: the messages loaded so far, the running turn's
@@ -222,13 +224,24 @@ final class ProjectChat {
     }
 
     /// Fetches the thumbnail of an image on the host, a sent attachment or a linked file, from a
-    /// host that serves files, unless it is kept already.
+    /// host that serves files, unless it is kept already. Only the host refusing it or bytes that
+    /// are no image make it unreadable; a dropped connection leaves it to be tried again.
     func loadThumbnail(of path: String) async {
-        guard thumbnails[path] == nil, !unreadable.contains(path) else { return }
-        guard host.capabilities.contains("files"),
-              let contents = try? await host.connection.request(ReadFileCommand(path: path, maxBytes: Self.thumbnailSourceLimit)),
-              let image = contents.bytes.flatMap(Photo.thumbnail(of:))
-        else {
+        guard thumbnails[path] == nil, !unreadable.contains(path), host.isConnected else { return }
+        guard host.capabilities.contains("files") else {
+            unreadable.insert(path)
+            return
+        }
+        let contents: FileContents
+        do {
+            contents = try await host.connection.request(ReadFileCommand(path: path, maxBytes: Self.thumbnailSourceLimit))
+        } catch ConnectionError.commandFailed {
+            unreadable.insert(path)
+            return
+        } catch {
+            return
+        }
+        guard let image = contents.bytes.flatMap(Photo.thumbnail(of:)) else {
             unreadable.insert(path)
             return
         }
@@ -266,7 +279,16 @@ final class ProjectChat {
         for reference in references {
             if let path = files[reference], FileLinks.isImage(path), !images.contains(path) { images.append(path) }
         }
-        fileLinks[message.id] = MessageFiles(markdown: FileLinks.linked(message.body, files: files), images: images)
+        fileLinks[message.id] = MessageFiles(
+            markdown: FileLinks.linked(message.body, files: files), images: images, paths: Set(files.values)
+        )
+    }
+
+    /// The host path a tapped link opens: only a file the host resolved for a message, never a
+    /// file link a message wrote itself, which skipped resolving and the check for files that run.
+    func openablePath(of url: URL) -> String? {
+        guard let path = FileLinks.path(of: url), fileLinks.values.contains(where: { $0.paths.contains(path) }) else { return nil }
+        return path
     }
 
     /// Where a message's relative references resolve, as the desktop has it: its sender's ticket

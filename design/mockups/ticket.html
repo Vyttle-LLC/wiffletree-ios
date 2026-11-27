@@ -15,19 +15,23 @@
   <div class="appearance"></div>
 </header>
 <div class="intro">
-  <p>Pushed from a ticket in the project's pinned status. One screen per ticket: where it stands, its review cycles and findings, its pull request and the agents on it.</p>
+  <p>Pushed from a ticket in the project's tickets sheet, inside the sheet. Status and pull request use the desktop's words and colours. One screen per ticket: where it stands, its review cycles and findings, its pull request and the agents on it.</p>
 </div>
 <main class="gallery">
 
   <figure class="shot">
     <div class="phones">
       <div class="phone">
-        <div class="nav"><div class="lead"><span class="back"><svg class="i"><use href="#i-back"/></svg>Tide alerts</span></div><div></div><div class="trail"></div></div>
+        <div class="nav bordered"><div class="lead"><span class="back"><svg class="i"><use href="#i-back"/></svg>Projects</span></div><div class="title">Tide alerts<small>Coordinator · working</small></div><div class="trail"><svg class="i"><use href="#i-dots"/></svg></div></div>
+        <div class="scrim"></div>
+        <div class="sheet tickets large" style="overflow:hidden">
+        <div class="grabber"></div>
+        <div class="nav"><div class="lead"><span class="back"><svg class="i"><use href="#i-back"/></svg>Tickets</span></div><div></div><div class="trail"></div></div>
         <div class="content">
           <div style="padding:0 16px 12px">
             <div style="font-size:24px;font-weight:700;line-height:1.2">Add the tidepool alert command</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
-              <span class="chip yellow"><svg class="i"><use href="#i-spin"/></svg>Verifying · round 2</span>
+              <span class="chip plain"><svg class="i"><use href="#i-spin"/></svg>Verifying · round 2</span>
               <span class="chip plain">Vyttle-LLC/tidepool</span>
             </div>
           </div>
@@ -56,6 +60,7 @@
             <div class="row"><div class="main">Reviewer · Correctness<span class="sub">Codex</span></div><span class="state cyan"><svg class="i"><use href="#i-spin"/></svg>Working</span></div>
           </div>
         </div>
+        </div>
       </div>
     </div>
     <figcaption><b>Ticket in review</b>Status chip in words. Each verifier's verdict per round; a failed round lists its blocking findings with location, and the commit that fixed it. Only failed verifiers re-run, so passed rows stay passed.</figcaption>
@@ -64,7 +69,11 @@
   <figure class="shot">
     <div class="phones">
       <div class="phone">
-        <div class="nav"><div class="lead"><span class="back"><svg class="i"><use href="#i-back"/></svg>Flaky sync test</span></div><div></div><div class="trail"></div></div>
+        <div class="nav bordered"><div class="lead"><span class="back"><svg class="i"><use href="#i-back"/></svg>Projects</span></div><div class="title">Flaky sync test<small>Coordinator · idle</small></div><div class="trail"><svg class="i"><use href="#i-dots"/></svg></div></div>
+        <div class="scrim"></div>
+        <div class="sheet tickets large" style="overflow:hidden">
+        <div class="grabber"></div>
+        <div class="nav"><div class="lead"><span class="back"><svg class="i"><use href="#i-back"/></svg>Tickets</span></div><div></div><div class="trail"></div></div>
         <div class="content">
           <div style="padding:0 16px 12px">
             <div style="font-size:24px;font-weight:700;line-height:1.2">Retry the sync on a lost lock</div>
@@ -75,7 +84,7 @@
           </div>
 
           <div class="card">
-            <div style="display:flex;align-items:center;gap:8px"><svg class="i" style="color:var(--green);font-size:20px"><use href="#i-pr"/></svg><h3>#212 · Open</h3><span class="chip yellow" style="margin-left:auto">Waiting for you</span></div>
+            <div style="display:flex;align-items:center;gap:8px"><svg class="i" style="color:var(--green);font-size:20px"><use href="#i-pr"/></svg><h3>#212 open</h3><span class="chip yellow" style="margin-left:auto">Waiting for you</span></div>
             <div class="meta" style="margin-top:6px;font-size:14px">Checks passed · into <span class="mono">feature/sync-retry</span> · +86 −12</div>
             <div class="btn-row" style="margin-top:12px">
               <button class="btn filled small" style="flex:1">Merge in Inbox</button>
@@ -95,9 +104,10 @@
             <div class="row"><div class="main">Tester<span class="sub">Codex</span></div><span class="state subtle">Archived</span></div>
           </div>
         </div>
+        </div>
       </div>
     </div>
-    <figcaption><b>Ticket with a pull request</b>PR number, state, checks and where it merges. This one merges into a feature branch, so its merge approval waits in the Inbox. A pull request into a protected branch such as main shows only GitHub, where you merge it yourself.</figcaption>
+    <figcaption><b>Ticket with a pull request, inside the tickets sheet</b>Tapping a row in the <a href="project.html">tickets sheet</a> pushes the ticket inside the sheet; Tickets goes back to the list. The pull request reads “#212 open”, the desktop's words. PR number, state, checks and where it merges. This one merges into a feature branch, so its merge approval waits in the Inbox. A pull request into a protected branch such as main shows only GitHub, where you merge it yourself.</figcaption>
   </figure>
 
 </main>

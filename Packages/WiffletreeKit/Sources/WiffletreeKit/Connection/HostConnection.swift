@@ -166,6 +166,8 @@ public final class RemoteHostConnection: HostConnection {
                 error = await session.ended()
                 heartbeat.cancel()
                 shared.withLock { $0.session = nil }
+                // The read failed, but the connection under it may still be open: release it.
+                await session.close()
             } catch let failure {
                 error = failure
             }

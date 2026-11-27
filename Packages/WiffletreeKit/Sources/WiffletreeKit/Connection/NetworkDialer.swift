@@ -129,8 +129,8 @@ final class NetworkChannel: MessageChannel {
         self.connection = connection
         // A path that can no longer carry data, such as Wi-Fi gone, holds sends and reads
         // silently; dropping it now lets the client reconnect and say so at once.
-        connection.viabilityUpdateHandler = { isViable in
-            if !isViable { connection.forceCancel() }
+        connection.viabilityUpdateHandler = { [weak connection] isViable in
+            if !isViable { connection?.forceCancel() }
         }
     }
 

@@ -25,7 +25,12 @@ final class PipeEnd: MessageChannel {
         try await inbox.take()
     }
 
+    /// How many times this end's own side closed it.
+    var closes: Int { closeCount.withLock { $0 } }
+    private let closeCount = Mutex(0)
+
     func close() {
+        closeCount.withLock { $0 += 1 }
         close(with: .closed)
     }
 
@@ -96,6 +101,8 @@ final class FakeDialer: ChannelDialer {
 
     private let behaviours: [String: Behaviour]
     private let host: FakeHost?
+    /// The device's end of each channel opened, in order.
+    let opened = Mutex<[PipeEnd]>([])
 
     /// With a `host`, answering addresses reach it; without, they reach nothing.
     init(_ behaviours: [String: Behaviour], host: FakeHost? = nil) {
@@ -117,6 +124,7 @@ final class FakeDialer: ChannelDialer {
         if let host, host.publicKey != hostKey { throw .otherKey }
         let (device, server) = PipeEnd.pipe()
         if let host { host.serve(server, path: path) }
+        opened.withLock { $0.append(device) }
         return device
     }
 }

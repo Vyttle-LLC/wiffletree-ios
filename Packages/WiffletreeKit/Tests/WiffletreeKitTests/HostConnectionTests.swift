@@ -50,7 +50,8 @@ struct RemoteHostConnectionTests {
         addresses: [String: FakeDialer.Behaviour] = ["studio.local": .answer],
         heartbeat: Duration = .seconds(3600),
         backoff: Duration = .milliseconds(1),
-        connectingLimit: Duration = .seconds(30)
+        connectingLimit: Duration = .seconds(30),
+        dialer: FakeDialer? = nil
     ) async -> RemoteHostConnection {
         await host.pairDevice(device)
         let paired = PairedHost(
@@ -68,7 +69,7 @@ struct RemoteHostConnectionTests {
         options.connectingLimit = connectingLimit
         return RemoteHostConnection(
             host: paired, deviceKey: device, store: store, appVersion: "1.0",
-            dialer: FakeDialer(addresses, host: host), options: options
+            dialer: dialer ?? FakeDialer(addresses, host: host), options: options
         )
     }
 
@@ -222,6 +223,21 @@ struct RemoteHostConnectionTests {
             if case .connected = state { break }
         }
         #expect(await host.commands.filter { $0 == "subscribe" }.count >= 2)
+    }
+
+    @Test func anEndedSessionClosesItsChannel() async throws {
+        let dialer = FakeDialer(["studio.local": .answer], host: host)
+        let connection = await connect(backoff: .seconds(30), dialer: dialer)
+        defer { connection.close() }
+        _ = try await connection.request(PingCommand())
+        var states = connection.states.makeAsyncIterator()
+        await host.dropConnections()
+        while let state = await states.next() {
+            if case .waiting = state { break }
+        }
+        let channel = try #require(dialer.opened.withLock { $0.first })
+        for _ in 0..<100 where channel.closes == 0 { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(channel.closes == 1)
     }
 
     @Test func aRemovedDeviceStopsWithUnpaired() async throws {

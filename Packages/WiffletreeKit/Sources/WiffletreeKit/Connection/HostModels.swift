@@ -74,7 +74,8 @@ public struct Snapshot: Decodable, Sendable {
         return Snapshot(
             projects: open, spaces: spaces,
             sessions: sessions.filter { openIDs.contains($0.projectID) }, runtimes: runtimes,
-            attention: attention.filter { openIDs.contains($0.projectID) }, tickets: tickets, repositories: repositories
+            attention: attention.filter { openIDs.contains($0.projectID) }, tickets: tickets, repositories: repositories,
+            ticketsOwned: ticketsOwned
         )
     }
 

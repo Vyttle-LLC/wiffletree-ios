@@ -20,7 +20,7 @@ struct ClosedProjectTests {
           {"id":"a-open","project_id":"open","session_id":"c-open","operation_id":"question:1","prompt":"Which?"},
           {"id":"a-assistant","project_id":"assistant","session_id":"c-assistant","operation_id":"publish:1","prompt":"Publish?"},
           {"id":"a-closed","project_id":"closed","session_id":"c-closed","operation_id":"question:2","prompt":"Which?"}],
-         "tickets":[]}
+         "tickets":[],"tickets_owned":{"c-open":4}}
         """#
         return try! HostJSON.decoder.decode(Snapshot.self, from: Data(json.utf8))
     }()
@@ -34,5 +34,11 @@ struct ClosedProjectTests {
         #expect(open.projects.map(\.id) == ["open", "assistant"])
         #expect(open.sessions.map(\.id) == ["c-open", "c-assistant", "w-open"])
         #expect(open.attention.map(\.id) == ["a-open", "a-assistant"])
+    }
+
+    @Test func doneTicketsOnlyInTheArchiveStillCount() {
+        let open = snapshot.withoutClosedProjects()
+        #expect(open.ticketsOwned == ["c-open": 4])
+        #expect(open.ticketTable(of: "c-open").summary == "4 done")
     }
 }

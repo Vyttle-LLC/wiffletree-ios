@@ -29,6 +29,7 @@ targets:
         INFOPLIST_FILE: Wiffletree/Info.plist
         GENERATE_INFOPLIST_FILE: false
         CODE_SIGN_ENTITLEMENTS: Wiffletree/Wiffletree.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
       - package: WiffletreeKit
       - package: WiffletreeDesignSystem

@@ -390,6 +390,24 @@ struct ProjectChatTests {
         #expect(chat.failure != nil)
     }
 
+    @Test func beforeAnythingLoadsTheChatWaitsForAHostThatIsNotConnected() async throws {
+        let fake = FakeConnection()
+        let host = LiveHost(id: .demo, paired: nil, lastSeen: nil, connect: { fake })
+        let chat = host.chat(of: "p")
+        #expect(chat.isWaitingForHost)
+
+        fake.yield(.connected(address: HostAddress(host: "studio.local"), level: .control))
+        try await eventually { host.isConnected }
+        #expect(!chat.isWaitingForHost)
+
+        let demo = try await demoHost()
+        let loaded = demo.chat(of: Seed.tideAlerts)
+        await loaded.reloadAll()
+        demo.restart()
+        #expect(!demo.isConnected)
+        #expect(!loaded.isWaitingForHost)
+    }
+
     @Test func aFailedLoadEarlierOffersItAgainWithoutTheConversationError() async throws {
         let flaky = FlakyConnection(failingReads: 0)
         let host = LiveHost(id: .demo, paired: nil, lastSeen: nil, connect: { flaky })

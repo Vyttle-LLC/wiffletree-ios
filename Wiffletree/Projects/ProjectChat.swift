@@ -108,6 +108,9 @@ final class ProjectChat {
     var coordinator: Session? { overview?.coordinator }
     var entries: [ChatEntry] { ChatEntry.fold(messages) }
 
+    /// Nothing has loaded and the host is not connected, so the chat waits for it.
+    var isWaitingForHost: Bool { !hasLoaded && !host.isConnected }
+
     /// What the coordinator has said so far in a turn that is still running.
     var liveNarration: [Step] {
         guard let turn, turn.running else { return [] }

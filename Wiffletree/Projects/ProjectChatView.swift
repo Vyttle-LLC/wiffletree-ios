@@ -55,7 +55,9 @@ private struct ChatContent: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 16) {
-                        if !chat.hasLoaded && chat.failure == nil {
+                        if chat.isWaitingForHost {
+                            WaitingForHost(name: host.name, status: host.status)
+                        } else if !chat.hasLoaded && chat.failure == nil {
                             ProgressView().frame(maxWidth: .infinity)
                         }
                         if chat.hasEarlier {
@@ -132,6 +134,27 @@ private struct EntryView: View {
         let name = host.snapshot?.sessions.first { $0.id == sender }?.name ?? "An agent"
         // "Reviewer · Correctness" reads as "Reviewer" in the folded line.
         return name.components(separatedBy: " · ").first ?? name
+    }
+}
+
+/// Before anything has loaded, while the host is not connected: which Mac, and how it is reached.
+private struct WaitingForHost: View {
+    let name: String
+    let status: HostStatus
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ProgressView()
+            Text("Waiting for \(name)…")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Tidal.text)
+            Label(status.text, systemImage: status.systemImage)
+                .font(.footnote)
+                .foregroundStyle(Tidal.subtle)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 24)
+        .accessibilityElement(children: .combine)
     }
 }
 

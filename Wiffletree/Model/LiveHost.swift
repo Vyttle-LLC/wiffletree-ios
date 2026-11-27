@@ -28,6 +28,7 @@ final class LiveHost: Identifiable {
     @ObservationIgnored private var refresher: Task<Void, Never>?
     @ObservationIgnored private var wantsSnapshot = false
     @ObservationIgnored private var subscribers: [UUID: AsyncStream<HostEvent>.Continuation] = [:]
+    @ObservationIgnored private var chats: [String: ProjectChat] = [:]
 
     /// - Parameters:
     ///   - connect: Opens a connection, again for each `restart()`.
@@ -95,9 +96,19 @@ final class LiveHost: Identifiable {
         return stream
     }
 
-    /// Drops the connection and opens a new one: "Try again", or the demo started over.
+    /// A project's conversation, kept while this host is, so a chat opened again, even while the
+    /// host is unreachable, shows the history it loaded.
+    func chat(of projectID: String) -> ProjectChat {
+        if let chat = chats[projectID] { return chat }
+        let chat = ProjectChat(host: self, projectID: projectID)
+        chats[projectID] = chat
+        return chat
+    }
+
+    /// Drops the connection and opens a new one: "Try again", or the demo started over. The
+    /// conversations stay, and refresh once the new connection answers.
     func restart() {
-        stop()
+        disconnect()
         state = .connecting
         lastFailure = nil
         snapshot = nil
@@ -107,6 +118,12 @@ final class LiveHost: Identifiable {
 
     /// Ends the connection for good.
     func stop() {
+        disconnect()
+        // Each conversation holds its host, so the host lets them go.
+        chats = [:]
+    }
+
+    private func disconnect() {
         watchers.forEach { $0.cancel() }
         watchers = []
         refresher?.cancel()

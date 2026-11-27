@@ -50,6 +50,8 @@ struct FileLinksTests {
         }
         #expect(link("See this mockup: /w/mockup.html.", found) == "See this mockup: [/w/mockup.html](\(to("/w/mockup.html"))).")
         #expect(link("Read ~/notes.md, then (/w/a.rs:12): done", found) == "Read [~/notes.md](\(to("/Users/m/notes.md"))), then ([/w/a.rs:12](\(to("/w/a.rs")))): done")
+        // The host answers a doubled slash as written.
+        #expect(link("See //w/a.rs", { $0 }) == "See [//w/a.rs](\(to("//w/a.rs")))")
         #expect(link("- '/w/a.rs' and **/w/mockup.html**", found) == "- '[/w/a.rs](\(to("/w/a.rs")))' and **[/w/mockup.html](\(to("/w/mockup.html")))**")
     }
 
@@ -107,7 +109,7 @@ struct FileLinksTests {
     }
 
     @Test func aFileLinkCarriesItsPathThroughTheURL() {
-        for path in ["/Users/me/a b #1%.md", "/w/(draft) é.png"] {
+        for path in ["/Users/me/a b #1%.md", "/w/(draft) é.png", "//Users/me/notes.md", "///w/a.md"] {
             #expect(FileLinks.path(of: FileLinks.url(for: path)) == path)
         }
         #expect(FileLinks.path(of: URL(string: "https://example.com/a.md")!) == nil)

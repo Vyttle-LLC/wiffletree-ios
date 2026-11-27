@@ -45,6 +45,9 @@ public enum FileLinks {
     public static func url(for path: String) -> URL {
         var components = URLComponents()
         components.scheme = scheme
+        // An empty host lets the path start with `//`; the host resolves only absolute paths,
+        // and with a host every path starting with `/` makes a URL.
+        components.host = ""
         components.path = path
         return components.url!
     }

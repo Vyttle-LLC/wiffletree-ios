@@ -52,6 +52,16 @@ struct ComposerPhoto: Identifiable {
     var id: String { upload.id }
 }
 
+/// A message's file references as the host resolved them.
+struct MessageFiles {
+    /// The message's Markdown with each file it names linked.
+    let markdown: String
+    /// The linked images, in the order the message names them.
+    let images: [String]
+    /// Every file the host resolved for the message, which only it may open.
+    let paths: Set<String>
+}
+
 /// A project's conversation with its coordinator: the messages loaded so far, the running turn's
 /// narration, and sending, with photos. `run()` keeps both current from the host's events; the
 /// newest page merges into what is loaded, and earlier pages load on request.
@@ -80,10 +90,13 @@ final class ProjectChat {
     private(set) var photos: [ComposerPhoto] = []
     /// Photos chosen but still being converted; Send waits for them.
     private(set) var converting = 0
-    /// Sent attachments' thumbnails by path, as far as they have loaded.
+    /// Thumbnails of sent attachments and linked images by path, as far as they have loaded; only
+    /// the latest `thumbnailLimit` are kept.
     private(set) var thumbnails: [String: UIImage] = [:]
-    /// Sent attachments whose image could not be read, shown by name instead.
+    /// Images that could not be read, shown by name instead.
     private(set) var unreadable: Set<String> = []
+    /// Messages' file links by message id, once the host has said which references are files.
+    private(set) var fileLinks: [String: MessageFiles] = [:]
 
     @ObservationIgnored private let host: LiveHost
     /// How many messages one read asks for.
@@ -96,6 +109,8 @@ final class ProjectChat {
     /// The newest sequence the last newest page held. A sent message shows before any page holds
     /// it, so it never counts towards whether a page reaches back to the loaded history.
     @ObservationIgnored private var newestPaged: Int64?
+    /// The thumbnails' paths, oldest first, so the oldest go first.
+    @ObservationIgnored private var thumbnailOrder: [String] = []
 
     /// - Parameter pageSize: The host's largest page by default, as the desktop reads.
     init(host: LiveHost, projectID: String, pageSize: Int = 100) {
@@ -196,7 +211,7 @@ final class ProjectChat {
         let command = SendCommand(id: retried ?? UUID().uuidString, recipient: coordinator.id, body: body, uploads: uploads)
         do {
             let sent = try await host.connection.request(command)
-            for (photo, attachment) in zip(photos, sent.attachments) { thumbnails[attachment.path] = photo.thumbnail }
+            for (photo, attachment) in zip(photos, sent.attachments) { keep(photo.thumbnail, of: attachment.path) }
             draft = ""
             photos = []
             photosNamed = 0
@@ -208,22 +223,99 @@ final class ProjectChat {
         }
     }
 
-    /// Fetches a sent image attachment's thumbnail once, from a host that serves files.
-    func loadThumbnail(of attachment: Attachment) async {
-        let path = attachment.path
-        guard thumbnails[path] == nil, !unreadable.contains(path) else { return }
-        guard host.capabilities.contains("files"),
-              let contents = try? await host.connection.request(ReadFileCommand(path: path, maxBytes: Self.thumbnailSourceLimit)),
-              let image = contents.bytes.flatMap(Photo.thumbnail(of:))
-        else {
+    /// Fetches the thumbnail of an image on the host, a sent attachment or a linked file, from a
+    /// host that serves files, unless it is kept already. Only the host refusing it or bytes that
+    /// are no image make it unreadable; a dropped connection leaves it to be tried again.
+    func loadThumbnail(of path: String) async {
+        guard thumbnails[path] == nil, !unreadable.contains(path), host.isConnected else { return }
+        guard host.capabilities.contains("files") else {
             unreadable.insert(path)
             return
         }
-        thumbnails[path] = image
+        let contents: FileContents
+        do {
+            contents = try await host.connection.request(ReadFileCommand(path: path, maxBytes: Self.thumbnailSourceLimit))
+        } catch ConnectionError.commandFailed {
+            unreadable.insert(path)
+            return
+        } catch {
+            return
+        }
+        guard let image = contents.bytes.flatMap(Photo.thumbnail(of:)) else {
+            unreadable.insert(path)
+            return
+        }
+        keep(image, of: path)
     }
 
     /// The largest image the conversation fetches to show.
     private static let thumbnailSourceLimit = 10 * 1024 * 1024
+    /// Enough thumbnails for the messages on screen and a little scrolling.
+    private static let thumbnailLimit = 40
+
+    private func keep(_ thumbnail: UIImage, of path: String) {
+        thumbnails[path] = thumbnail
+        thumbnailOrder.removeAll { $0 == path }
+        thumbnailOrder.append(path)
+        while thumbnailOrder.count > Self.thumbnailLimit {
+            thumbnails[thumbnailOrder.removeFirst()] = nil
+        }
+    }
+
+    /// Asks the host which of a message's references are files, in one request, and links them.
+    /// Only files the host finds become links, and never one that would run when opened. Asked
+    /// again the next time the message shows when the host could not answer.
+    func resolveFiles(of message: Message) async {
+        guard fileLinks[message.id] == nil, host.capabilities.contains("files") else { return }
+        let references = FileLinks.references(in: message.body)
+        guard !references.isEmpty,
+              let resolved = try? await host.connection.request(ResolvePathsCommand(references: references, bases: linkBases(of: message)))
+        else { return }
+        var files: [String: String] = [:]
+        for case let (reference, file?) in zip(references, resolved) where !file.runsWhenOpened {
+            files[reference] = file.path
+        }
+        var images: [String] = []
+        for reference in references {
+            if let path = files[reference], FileLinks.isImage(path), !images.contains(path) { images.append(path) }
+        }
+        fileLinks[message.id] = MessageFiles(
+            markdown: FileLinks.linked(message.body, files: files), images: images, paths: Set(files.values)
+        )
+    }
+
+    /// The host path a tapped link opens: only a file the host resolved for a message, never a
+    /// file link a message wrote itself, which skipped resolving and the check for files that run.
+    func openablePath(of url: URL) -> String? {
+        guard let path = FileLinks.path(of: url), fileLinks.values.contains(where: { $0.paths.contains(path) }) else { return nil }
+        return path
+    }
+
+    /// Where a message's relative references resolve, as the desktop has it: its sender's ticket
+    /// worktree or directory, then the project's home. The human's resolve as the coordinator's.
+    private func linkBases(of message: Message) -> [String] {
+        guard let snapshot = host.snapshot else { return [] }
+        let runtime = (message.sender ?? coordinator?.id).flatMap(snapshot.runtime(of:))
+        let home = snapshot.projects.first { $0.id == projectID }?.home
+        return [runtime?.workdir ?? runtime?.directory, home].compactMap(\.self)
+    }
+
+    /// Reads a file from the host into a temporary copy to show, at most as large as the host
+    /// serves. The copy goes with `removeCopy(_:)`.
+    func copy(of path: String) async throws -> URL {
+        let contents = try await host.connection.request(ReadFileCommand(path: path, maxBytes: Upload.sizeLimit))
+        try Task.checkCancellation()
+        guard let bytes = contents.bytes else { throw ConnectionError.unexpectedMessage("the contents of \(path)") }
+        let folder = FileManager.default.temporaryDirectory.appending(path: "Opened/\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let copy = folder.appending(path: (path as NSString).lastPathComponent)
+        try bytes.write(to: copy, options: .completeFileProtection)
+        return copy
+    }
+
+    func removeCopy(_ copy: URL) {
+        try? FileManager.default.removeItem(at: copy.deletingLastPathComponent())
+    }
 
     private func update(_ upload: Upload) {
         guard let index = photos.firstIndex(where: { $0.id == upload.id }) else { return }

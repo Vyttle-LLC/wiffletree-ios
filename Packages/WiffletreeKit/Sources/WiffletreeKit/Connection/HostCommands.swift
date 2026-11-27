@@ -92,6 +92,21 @@ public struct ReadFileCommand: HostCommand {
     }
 }
 
+/// Which `references` name a file on the host: each as written when absolute or under `~/`, or
+/// else under the first of `bases` that holds it. Answered with one `ResolvedPath` or nil per
+/// reference, in order. Reads no file's contents. Needs `files`.
+public struct ResolvePathsCommand: HostCommand {
+    public typealias Reply = [ResolvedPath?]
+    public static let type = "resolve_paths"
+    public let references: [String]
+    public let bases: [String]
+
+    public init(references: [String], bases: [String]) {
+        self.references = references
+        self.bases = bases
+    }
+}
+
 /// Answers an Inbox item: a question with its answer, an approval with `approved` or anything
 /// else as denied.
 public struct ResolveAttentionCommand: HostCommand {

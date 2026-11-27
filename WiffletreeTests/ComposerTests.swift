@@ -202,11 +202,11 @@ struct ComposerTests {
 
         // Opened afresh, the conversation has only the host's copy.
         let reader = ProjectChat(host: host, projectID: "demo-tide-alerts")
-        await reader.loadThumbnail(of: attachment)
+        await reader.loadThumbnail(of: attachment.path)
         #expect(reader.thumbnails[attachment.path] != nil)
 
         let missing = Attachment(path: "demo/attachments/gone/Photo 9.jpg", size: 1, image: "jpeg")
-        await reader.loadThumbnail(of: missing)
+        await reader.loadThumbnail(of: missing.path)
         #expect(reader.thumbnails[missing.path] == nil)
         #expect(reader.unreadable.contains(missing.path))
     }

@@ -55,6 +55,24 @@ struct DemoHostConnectionTests {
         #expect(DemoHostConnection.name == "Demo Mac")
     }
 
+    @Test func stationMapsCoordinatorLinksAMockupAndAScreenshotThatOpen() async throws {
+        let conversation = try await demo.request(MessagesCommand(sessionID: DemoID.stationCoordinator))
+        let reply = try #require(conversation.first { FileLinks.references(in: $0.body).count == 2 })
+        let runtime = try #require(try await snapshot().runtimes.first { $0.sessionID == DemoID.stationCoordinator })
+        let bases = [runtime.workdir ?? runtime.directory].compactMap(\.self)
+
+        let references = FileLinks.references(in: reply.body)
+        let resolved = try await demo.request(ResolvePathsCommand(references: references + ["missing.md"], bases: bases))
+        #expect(resolved.map { $0?.path } == [DemoFiles.mockup, DemoFiles.screenshot, nil])
+        #expect(resolved.allSatisfy { $0?.runsWhenOpened != true })
+
+        let html = try await demo.request(ReadFileCommand(path: DemoFiles.mockup, maxBytes: Upload.sizeLimit))
+        #expect(html.bytes.map { String(decoding: $0, as: UTF8.self) }?.contains("<html") == true)
+        let png = try await demo.request(ReadFileCommand(path: DemoFiles.screenshot, maxBytes: Upload.sizeLimit))
+        #expect(png.bytes?.starts(with: [0x89, 0x50, 0x4E, 0x47]) == true)
+        #expect(FileLinks.isImage(DemoFiles.screenshot))
+    }
+
     @Test func flakySyncTestsTicketsAreTheMockupsAndWaitingApprovalsNeedYou() async throws {
         let seed = try await snapshot()
         let flaky = seed.ticketTable(of: DemoID.flakyCoordinator)

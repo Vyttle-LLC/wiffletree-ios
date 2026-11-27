@@ -106,8 +106,12 @@ public struct SessionRuntime: Decodable, Sendable {
     /// The ticket a ticket agent works on.
     public let ticketID: String?
     public let profile: Profile?
+    /// The ticket's worktree, for a ticket agent.
+    public var workdir: String?
+    /// Where the provider last ran the session.
+    public var directory: String?
 
-    private enum CodingKeys: String, CodingKey { case sessionID = "sessionId", ticketID = "ticketId", profile }
+    private enum CodingKeys: String, CodingKey { case sessionID = "sessionId", ticketID = "ticketId", profile, workdir, directory }
 }
 
 public struct Project: Decodable, Identifiable, Sendable {
@@ -117,14 +121,17 @@ public struct Project: Decodable, Identifiable, Sendable {
     public let space: String
     /// The project this one is filed under.
     public let parentID: String?
+    /// The project's own folder on the host, where its relative file references resolve last.
+    public let home: String?
 
-    private enum CodingKeys: String, CodingKey { case id, name, space, parentID = "parentId" }
+    private enum CodingKeys: String, CodingKey { case id, name, space, parentID = "parentId", home }
 
-    init(id: String, name: String, space: String = "", parentID: String? = nil) {
+    init(id: String, name: String, space: String = "", parentID: String? = nil, home: String? = nil) {
         self.id = id
         self.name = name
         self.space = space
         self.parentID = parentID
+        self.home = home
     }
 
     public init(from decoder: any Decoder) throws {
@@ -133,6 +140,7 @@ public struct Project: Decodable, Identifiable, Sendable {
         name = try container.decode(String.self, forKey: .name)
         space = try container.decodeIfPresent(String.self, forKey: .space) ?? ""
         parentID = try container.decodeIfPresent(String.self, forKey: .parentID)
+        home = try container.decodeIfPresent(String.self, forKey: .home)
     }
 }
 
@@ -629,6 +637,18 @@ public struct Uploaded: Decodable, Equatable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey { case uploadID = "uploadId", stored }
+}
+
+/// A reference `resolve_paths` found as a file on the host.
+public struct ResolvedPath: Decodable, Equatable, Sendable {
+    public let path: String
+    /// Opening it would run it: an executable, or a script Terminal runs. Never opened.
+    public let runsWhenOpened: Bool
+
+    public init(path: String, runsWhenOpened: Bool) {
+        self.path = path
+        self.runsWhenOpened = runsWhenOpened
+    }
 }
 
 /// `read_file`'s reply.

@@ -105,7 +105,7 @@ enum DemoSeed {
             SessionRuntime(sessionID: "demo-tide-alert-implementer", ticketID: DemoID.alertCommandTicket, profile: opus),
             SessionRuntime(sessionID: "demo-tide-alert-reviewer", ticketID: DemoID.alertCommandTicket, profile: codex),
             SessionRuntime(sessionID: "demo-tide-station-page-implementer", ticketID: DemoID.stationPageTicket, profile: opus),
-            SessionRuntime(sessionID: DemoID.stationCoordinator, ticketID: nil, profile: opus),
+            SessionRuntime(sessionID: DemoID.stationCoordinator, ticketID: nil, profile: opus, directory: DemoFiles.tidepool),
             SessionRuntime(sessionID: "demo-station-implementer", ticketID: DemoID.drawStationsTicket, profile: sonnet),
             SessionRuntime(sessionID: DemoID.flakyCoordinator, ticketID: nil, profile: opus),
             SessionRuntime(sessionID: "demo-flaky-tester", ticketID: DemoID.lockLogTicket, profile: codex),
@@ -309,6 +309,8 @@ enum DemoSeed {
             (55, .human, DemoID.stationCoordinator, "Let's put the stations on a map on the station page."),
             (50, .coordinator, DemoID.stationCoordinator, """
                 I've planned two tickets, **Draw stations on the map** and **Open a station's page from its pin**. The implementer has started on the first.
+
+                It works to this layout: [station-page.html](\(DemoFiles.mockup)). Its first pass at the pins is in `design/station-map.png`.
                 """),
             (40, .coordinator, DemoID.tideCoordinator, """
                 **Store alert thresholds per station** passed its Full review, and I've accepted it.

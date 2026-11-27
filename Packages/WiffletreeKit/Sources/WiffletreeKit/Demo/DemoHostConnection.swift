@@ -47,8 +47,9 @@ public final class DemoHostConnection: HostConnection {
         var cannedRepliesSent = 0
         /// Uploads by id, until a message names them.
         var uploads: [String: (name: String, data: Data)] = [:]
-        /// Sent messages' attachments by path, as `read_file` serves them.
-        var files: [String: Data] = [:]
+        /// The files messages link to, and sent messages' attachments, by path, as
+        /// `resolve_paths` finds them and `read_file` serves them.
+        var files = DemoFiles.all
         var isClosed = false
     }
 
@@ -132,6 +133,8 @@ public final class DemoHostConnection: HostConnection {
                 return try dismiss(command.id, in: &shared)
             case let command as UploadAttachmentCommand:
                 return try upload(command, in: &shared)
+            case let command as ResolvePathsCommand:
+                return resolvePaths(command, in: shared)
             case let command as ReadFileCommand:
                 return try readFile(command, in: shared)
             case let command as UsageCommand:
@@ -208,6 +211,21 @@ public final class DemoHostConnection: HostConnection {
             shared.files[attachment.path] = shared.uploads.removeValue(forKey: id)?.data
         }
         return attachments
+    }
+
+    /// Each reference as the host resolves it: as written when absolute, under the demo Mac's
+    /// home for `~/`, else under the first base that holds it. No demo file runs when opened.
+    private func resolvePaths(_ command: ResolvePathsCommand, in shared: Shared) -> [ResolvedPath?] {
+        command.references.map { reference in
+            let candidates = if reference.hasPrefix("/") {
+                [reference]
+            } else if reference.hasPrefix("~/") {
+                [DemoFiles.home + reference.dropFirst()]
+            } else {
+                command.bases.map { "\($0)/\(reference)" }
+            }
+            return candidates.first { shared.files[$0] != nil }.map { ResolvedPath(path: $0, runsWhenOpened: false) }
+        }
     }
 
     private func readFile(_ command: ReadFileCommand, in shared: Shared) throws(ConnectionError) -> FileContents {
